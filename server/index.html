@@ -83,13 +83,17 @@
         const log = msg => { $('log-output').innerHTML = `> ${msg}\n` + $('log-output').innerHTML; };
         let currentReward = 0.0;
         
-        function displayObservation(obs) {
-            // obs can come from /reset or /step responses
-            // The observation contains: prescription, patient_info, done, reward, feedback, etc.
-            if (!obs) {
+        function displayObservation(rawData) {
+            // The API returns {observation: {...}, reward, done} — unwrap it
+            if (!rawData) {
                 $('patient-data').textContent = 'No data received. Click "Start New Patient" to begin.';
                 return;
             }
+            
+            // Unwrap: the observation is inside rawData.observation or rawData itself
+            const obs = rawData.observation || rawData;
+            const reward = rawData.reward != null ? rawData.reward : (obs.reward != null ? obs.reward : null);
+            const done = rawData.done != null ? rawData.done : (obs.done === true);
             
             const displayData = {};
             
@@ -107,7 +111,7 @@
             }
             
             // Update status
-            const isDone = obs.done === true;
+            const isDone = done === true;
             $('status-done').textContent = `Status: ${isDone ? 'Finished (Done)' : 'Active'}`;
             if (isDone) {
                 $('status-done').classList.add('text-red-400');
@@ -116,19 +120,21 @@
             }
             
             // Show feedback if present
-            if (obs.feedback) {
+            const feedback = obs.feedback || '';
+            if (feedback) {
                 $('feedback-panel').classList.remove('hidden');
-                $('feedback-text').textContent = obs.feedback;
-                if (obs.feedback.includes('✅')) {
+                $('feedback-text').textContent = feedback;
+                if (feedback.includes('✅')) {
                     $('feedback-text').className = 'text-lg font-semibold text-green-400';
-                } else if (obs.feedback.includes('❌')) {
+                } else if (feedback.includes('❌')) {
                     $('feedback-text').className = 'text-lg font-semibold text-red-400';
-                } else if (obs.feedback.includes('🎯')) {
+                } else if (feedback.includes('🎯')) {
                     $('feedback-text').className = 'text-lg font-semibold text-yellow-400';
                 } else {
                     $('feedback-text').className = 'text-lg font-semibold text-blue-400';
                 }
             }
+            return { obs, reward, done };
         }
 
         $('btn-reset').onclick = async () => {
@@ -146,7 +152,7 @@
                 $('status-reward').textContent = `Total Reward: ${currentReward.toFixed(2)}`;
                 
                 // The /reset endpoint returns the observation directly
-                displayObservation(data);
+                const result = displayObservation(data);
                 log('Environment reset successfully! Review the prescription and take an action.');
             } catch (e) {
                 log('Reset Failed: ' + e.message);
@@ -156,13 +162,17 @@
 
         $('btn-submit').onclick = async () => {
             $('btn-submit').classList.add('loading');
-            const actionPayload = {
+            const innerAction = {
                 action_type: $('input-action').value,
-                drug_name: $('input-drug').value || undefined,
                 recommendation: $('input-recommendation').value || 'No recommendation'
             };
+            // Only include drug_name if it has a value
+            if ($('input-drug').value) {
+                innerAction.drug_name = $('input-drug').value;
+            }
+            const actionPayload = { action: innerAction };
             
-            log(`Submitting action: ${actionPayload.action_type}...`);
+            log(`Submitting action: ${innerAction.action_type}...`);
             try {
                 const res = await fetch('/step', {
                     method: 'POST',
@@ -175,15 +185,13 @@
                     throw new Error(JSON.stringify(data.detail || "Unknown API Error"));
                 }
                 
-                let stepReward = data.reward || 0.0;
+                const result = displayObservation(data);
+                let stepReward = result.reward || 0.0;
                 currentReward += stepReward;
                 $('status-reward').textContent = `Total Reward: ${currentReward.toFixed(2)}`;
                 log(`Action graded! Reward: ${stepReward.toFixed(2)} | Total: ${currentReward.toFixed(2)}`);
                 
-                // The /step endpoint returns the observation directly
-                displayObservation(data);
-                
-                if (data.done) {
+                if (result.done) {
                     log('=== EPISODE COMPLETE === Final reward: ' + currentReward.toFixed(2));
                 }
             } catch (e) {
