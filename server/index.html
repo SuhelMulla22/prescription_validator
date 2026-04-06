@@ -81,6 +81,12 @@
                 const res = await fetch('/state');
                 const data = await res.json();
                 
+                if (!data || !data.observation) {
+                    $('patient-data').textContent = "Waiting for environment reset. Click 'Start New Patient' to begin.";
+                    $('status-done').textContent = "Status: Not Started";
+                    return;
+                }
+                
                 const displayData = {
                     patient: data.observation.patient_info,
                     prescription: data.observation.prescription
