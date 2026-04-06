@@ -28,7 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api-inference.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-API_KEY = os.getenv("HF_TOKEN")  # HF Token for Hugging Face Inference API
+HF_TOKEN = os.getenv("HF_TOKEN")
 IMAGE_NAME = os.getenv("IMAGE_NAME", "suhellll/prescription-validator")
 
 # Task configuration
@@ -56,12 +56,17 @@ def log_step(step: int, action: str, reward: float, done: bool, error=None):
     """Log each step - EXACT FORMAT REQUIRED"""
     # Escape special characters in action string
     action_str = str(action).replace('\n', ' ').replace('\r', '')
-    print(f"[STEP] step={step} action={action_str} reward={reward} done={done} error={error}", flush=True)
+    reward_fmt = f"{reward:.2f}"
+    done_fmt = "true" if done else "false"
+    error_fmt = "null" if error is None else str(error)
+    print(f"[STEP] step={step} action={action_str} reward={reward_fmt} done={done_fmt} error={error_fmt}", flush=True)
 
 
-def log_end(success: bool, steps: int, score: float, rewards: list):
+def log_end(success: bool, steps: int, rewards: list):
     """Log episode end - EXACT FORMAT REQUIRED"""
-    print(f"[END] success={success} steps={steps} score={score} rewards={rewards}", flush=True)
+    success_fmt = "true" if success else "false"
+    rewards_fmt = ",".join(f"{r:.2f}" for r in rewards)
+    print(f"[END] success={success_fmt} steps={steps} rewards={rewards_fmt}", flush=True)
 
 
 # ============================================================================
@@ -366,11 +371,10 @@ async def main():
     from models import PrescriptionAction
     
     # Initialize OpenAI client
-    if not API_KEY:
-        print("[ERROR] HF_TOKEN environment variable not set!", flush=True)
-        sys.exit(1)
+    if HF_TOKEN is None:
+        raise ValueError("HF_TOKEN environment variable is required")
     
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
     
     # Tracking
     history: List[str] = []
@@ -455,7 +459,7 @@ async def main():
         import traceback
         traceback.print_exc()
     
-    log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
+    log_end(success=success, steps=steps_taken, rewards=rewards)
 
 
 # ============================================================================
