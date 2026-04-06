@@ -26,9 +26,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # MANDATORY ENVIRONMENT VARIABLES
 # ============================================================================
 
-API_BASE_URL = os.getenv("API_BASE_URL", "https://openrouter.ai/api/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "qwen/qwen-2.5-72b-instruct")
-API_KEY = os.getenv("HF_TOKEN")  # USE HF TOKEN, NOT OPENAI KEY!
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api-inference.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+API_KEY = os.getenv("HF_TOKEN")  # HF Token for Hugging Face Inference API
 IMAGE_NAME = os.getenv("IMAGE_NAME", "suhellll/prescription-validator")
 
 # Task configuration
@@ -367,7 +367,7 @@ async def main():
     
     # Initialize OpenAI client
     if not API_KEY:
-        print("[ERROR] OPENROUTER_API_KEY environment variable not set!", flush=True)
+        print("[ERROR] HF_TOKEN environment variable not set!", flush=True)
         sys.exit(1)
     
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
