@@ -28,7 +28,7 @@
                     <button id="btn-reset" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm font-semibold transition-colors">Start New Patient (Reset)</button>
                 </div>
                 <div id="patient-data" class="bg-slate-900 rounded p-4 font-mono text-sm text-green-400 min-h-[200px] overflow-y-auto whitespace-pre-wrap">
-                    Waiting for environment reset...
+                    Click "Start New Patient" to begin...
                 </div>
                 <div class="mt-4 flex justify-between text-sm text-slate-400">
                     <span id="status-done">Status: Not Started</span>
@@ -48,6 +48,7 @@
                             <option value="flag_dosage">Flag Dosage</option>
                             <option value="flag_contraindication">Flag Contraindication</option>
                             <option value="flag_allergy">Flag Allergy</option>
+                            <option value="reject">Reject Prescription</option>
                             <option value="request_clarification">Request Clarification</option>
                         </select>
                     </div>
@@ -57,13 +58,19 @@
                     </div>
                     <div>
                         <label class="block text-sm text-slate-400 mb-1">Recommendation</label>
-                        <input id="input-recommendation" type="text" placeholder="e.g. Decrease dosage" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white outline-none focus:border-blue-500 transition-colors">
+                        <input id="input-recommendation" type="text" placeholder="e.g. Decrease dosage to 50mg" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white outline-none focus:border-blue-500 transition-colors">
                     </div>
                 </div>
                 <button id="btn-submit" class="mt-6 w-full py-3 bg-emerald-600 hover:bg-emerald-500 rounded font-bold transition-colors">Submit Action</button>
             </div>
         </div>
         
+        <!-- Feedback -->
+        <div id="feedback-panel" class="mt-6 glass rounded-xl p-6 shadow-xl hidden">
+            <h2 class="text-xl font-semibold text-white mb-2">Feedback</h2>
+            <div id="feedback-text" class="text-lg font-semibold"></div>
+        </div>
+
         <!-- Logs -->
         <div class="mt-6 glass rounded-xl p-6 shadow-xl">
             <h2 class="text-xl font-semibold text-white mb-2">Event Log</h2>
@@ -76,36 +83,57 @@
         const log = msg => { $('log-output').innerHTML = `> ${msg}\n` + $('log-output').innerHTML; };
         let currentReward = 0.0;
         
-        async function fetchState() {
-            try {
-                const res = await fetch('/state');
-                const data = await res.json();
-                
-                if (!data || !data.observation) {
-                    $('patient-data').textContent = "Waiting for environment reset. Click 'Start New Patient' to begin.";
-                    $('status-done').textContent = "Status: Not Started";
-                    return;
-                }
-                
-                const displayData = {
-                    patient: data.observation.patient_info,
-                    prescription: data.observation.prescription
-                };
+        function displayObservation(obs) {
+            // obs can come from /reset or /step responses
+            // The observation contains: prescription, patient_info, done, reward, feedback, etc.
+            if (!obs) {
+                $('patient-data').textContent = 'No data received. Click "Start New Patient" to begin.';
+                return;
+            }
+            
+            const displayData = {};
+            
+            if (obs.patient_info) {
+                displayData.patient = obs.patient_info;
+            }
+            if (obs.prescription) {
+                displayData.prescription = obs.prescription;
+            }
+            
+            if (Object.keys(displayData).length > 0) {
                 $('patient-data').textContent = JSON.stringify(displayData, null, 2);
-                
-                $('status-done').textContent = `Status: ${data.observation.done ? 'Finished (Done)' : 'Active'}`;
-                if(data.observation.done) {
-                    $('status-done').classList.add('text-red-400');
+            } else {
+                $('patient-data').textContent = JSON.stringify(obs, null, 2);
+            }
+            
+            // Update status
+            const isDone = obs.done === true;
+            $('status-done').textContent = `Status: ${isDone ? 'Finished (Done)' : 'Active'}`;
+            if (isDone) {
+                $('status-done').classList.add('text-red-400');
+            } else {
+                $('status-done').classList.remove('text-red-400');
+            }
+            
+            // Show feedback if present
+            if (obs.feedback) {
+                $('feedback-panel').classList.remove('hidden');
+                $('feedback-text').textContent = obs.feedback;
+                if (obs.feedback.includes('✅')) {
+                    $('feedback-text').className = 'text-lg font-semibold text-green-400';
+                } else if (obs.feedback.includes('❌')) {
+                    $('feedback-text').className = 'text-lg font-semibold text-red-400';
+                } else if (obs.feedback.includes('🎯')) {
+                    $('feedback-text').className = 'text-lg font-semibold text-yellow-400';
                 } else {
-                    $('status-done').classList.remove('text-red-400');
+                    $('feedback-text').className = 'text-lg font-semibold text-blue-400';
                 }
-            } catch (e) {
-                log('Error fetching state: ' + e.message);
             }
         }
 
         $('btn-reset').onclick = async () => {
             $('btn-reset').classList.add('loading');
+            $('feedback-panel').classList.add('hidden');
             log('Resetting environment...');
             try {
                 const res = await fetch('/reset', {
@@ -116,8 +144,10 @@
                 const data = await res.json();
                 currentReward = 0.0;
                 $('status-reward').textContent = `Total Reward: ${currentReward.toFixed(2)}`;
-                await fetchState();
-                log('Environment reset successfully!');
+                
+                // The /reset endpoint returns the observation directly
+                displayObservation(data);
+                log('Environment reset successfully! Review the prescription and take an action.');
             } catch (e) {
                 log('Reset Failed: ' + e.message);
             }
@@ -128,8 +158,8 @@
             $('btn-submit').classList.add('loading');
             const actionPayload = {
                 action_type: $('input-action').value,
-                drug_name: $('input-drug').value,
-                recommendation: $('input-recommendation').value
+                drug_name: $('input-drug').value || undefined,
+                recommendation: $('input-recommendation').value || 'No recommendation'
             };
             
             log(`Submitting action: ${actionPayload.action_type}...`);
@@ -148,16 +178,22 @@
                 let stepReward = data.reward || 0.0;
                 currentReward += stepReward;
                 $('status-reward').textContent = `Total Reward: ${currentReward.toFixed(2)}`;
-                log(`Action graded! Reward: ${stepReward.toFixed(2)}`);
-                await fetchState();
+                log(`Action graded! Reward: ${stepReward.toFixed(2)} | Total: ${currentReward.toFixed(2)}`);
+                
+                // The /step endpoint returns the observation directly
+                displayObservation(data);
+                
+                if (data.done) {
+                    log('=== EPISODE COMPLETE === Final reward: ' + currentReward.toFixed(2));
+                }
             } catch (e) {
                 log('Action Failed: ' + e.message);
             }
             $('btn-submit').classList.remove('loading');
         };
 
-        // Load state on start
-        fetchState();
+        // Show initial message
+        log('Welcome! Click "Start New Patient (Reset)" to begin.');
     </script>
 </body>
 </html>
