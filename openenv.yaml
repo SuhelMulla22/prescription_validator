@@ -1,32 +1,25 @@
-# Medical Prescription Validation Environment Configuration
-# =========================================================
-
 name: prescription_validator
 version: "1.0.0"
 description: >
-  Real-world medical prescription validation environment for training AI
-  to prevent medication errors. Simulates clinical pharmacist reviewing
-  prescriptions for drug interactions, dosage errors, contraindications,
-  and allergy risks. Based on FDA drug interaction guidelines.
+  Medical prescription validation environment for training AI to prevent
+  medication errors. Simulates a clinical pharmacist reviewing prescriptions
+  for drug interactions, dosage errors, contraindications, and allergy risks.
 
 author: "Suhel Mulla"
 email: "suhelmulla22@gmail.com"
 license: "MIT"
 
-# Tags for discoverability
 tags:
   - healthcare
   - medical
   - safety
   - real-world
-  - production
   - clinical
   - pharmacology
   - prescription
   - drug-interaction
   - reinforcement-learning
 
-# Task definitions
 tasks:
   - id: easy
     name: "Basic Prescription Review"
@@ -49,23 +42,20 @@ tasks:
     expected_steps: 10-20
     max_reward: 3.0
 
-# Grading specification
 grading:
   score_range: [0.0, 1.0]
   deterministic: true
   partial_rewards: true
   reward_shaping: true
   explanation: |
-    Rewards based on:
-    - Correctly identifying critical issues: +1.0
-    - Correctly identifying warnings: +0.5
-    - Missing critical issues: -1.0
-    - False positives: -0.2
-    - Correct approval of safe prescription: +1.0
-    - Incorrect rejection of safe prescription: -0.5
-    - Detailed recommendation bonus: +0.1
+    Correctly identifying critical issues: +1.0
+    Correctly identifying warnings: +0.5
+    Missing critical issues: -1.0
+    False positives: -0.2
+    Correct approval of safe prescription: +1.0
+    Incorrect rejection of safe prescription: -0.5
+    Detailed recommendation bonus: +0.1
 
-# Environment capabilities
 capabilities:
   concurrent_sessions: true
   gpu_required: false
@@ -73,7 +63,6 @@ capabilities:
   observation_space: "structured"
   action_space: "discrete"
 
-# Healthcare domain metadata
 domain:
   category: "healthcare"
   subcategory: "clinical_decision_support"
@@ -82,15 +71,7 @@ domain:
     - "Pharmacy management systems"
     - "Clinical decision support"
     - "Medication safety monitoring"
-    - "AI pharmacist training"
-    - "Telehealth prescription review"
 
-  real_world_impact: |
-    Medication errors cause 7,000-9,000 deaths annually in the US alone.
-    This environment trains AI to catch errors before they harm patients.
-    Target deployment: hospital pharmacies, EHR systems, telehealth platforms.
-
-# Drug database summary
 drug_database:
   total_drugs: 14
   categories:
@@ -103,13 +84,10 @@ drug_database:
   interaction_pairs: 8
   severity_levels: ["critical", "warning", "info"]
 
-# Data sources (educational use)
 data_sources:
   - "FDA Drug Interaction Database (simplified)"
   - "Clinical Pharmacology Guidelines"
-  - "Standard contraindication patterns"
 
 disclaimer: |
-  This is an educational environment for AI training purposes.
-  NOT for actual clinical use without proper medical validation.
-  Always consult licensed healthcare professionals for real prescriptions.
+  This is an educational environment for AI training purposes only.
+  Not intended for actual clinical use without proper medical validation.

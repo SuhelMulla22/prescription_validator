@@ -1,41 +1,19 @@
-"""
-Medical Drug Database
-================================================================================
+"""Drug database and prescription case generator.
 
-This module contains drug information, interaction rules, and validation logic.
-
-Data sources (simplified for hackathon):
-- FDA drug interaction tables
-- Clinical pharmacology guidelines
-- Common contraindication patterns
-
-In production, this would connect to:
-- DrugBank API
-- FDA OpenFDA API
-- Clinical decision support systems
-
-Author: Suhel Mulla
+Contains drug reference data (dosing, interactions, contraindications)
+and generators for test cases of varying difficulty. Data is simplified
+from FDA drug interaction guidelines for educational use.
 """
 
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 
-
-# ============================================================================
-# DRUG DATABASE - Simplified medical reference
-# ============================================================================
 
 class DrugDatabase:
-    """
-    Centralized drug information database.
-    
-    In production, this would be a proper database with thousands of drugs.
-    For the hackathon, we include ~20 common drugs with real interaction data.
-    """
-    
+    """In-memory drug reference database with interaction and safety checking."""
+
     def __init__(self):
-        # Drug information: max/min doses, contraindications, etc.
         self.drugs = {
-            # ============ CARDIOVASCULAR DRUGS ============
+            # Cardiovascular
             "Warfarin": {
                 "class": "anticoagulant",
                 "max_daily_dose_mg": 10,
@@ -46,7 +24,6 @@ class DrugDatabase:
                 "requires_kidney_adjustment": False,
                 "requires_liver_adjustment": True,
             },
-            
             "Aspirin": {
                 "class": "antiplatelet",
                 "max_daily_dose_mg": 325,
@@ -57,7 +34,6 @@ class DrugDatabase:
                 "requires_kidney_adjustment": False,
                 "requires_liver_adjustment": False,
             },
-            
             "Lisinopril": {
                 "class": "ACE inhibitor",
                 "max_daily_dose_mg": 40,
@@ -68,7 +44,6 @@ class DrugDatabase:
                 "requires_kidney_adjustment": True,
                 "requires_liver_adjustment": False,
             },
-            
             "Metoprolol": {
                 "class": "beta blocker",
                 "max_daily_dose_mg": 200,
@@ -79,8 +54,7 @@ class DrugDatabase:
                 "requires_kidney_adjustment": False,
                 "requires_liver_adjustment": True,
             },
-            
-            # ============ DIABETES DRUGS ============
+            # Diabetes
             "Metformin": {
                 "class": "antidiabetic",
                 "max_daily_dose_mg": 2550,
@@ -91,7 +65,6 @@ class DrugDatabase:
                 "requires_kidney_adjustment": True,
                 "requires_liver_adjustment": False,
             },
-            
             "Insulin": {
                 "class": "antidiabetic",
                 "max_daily_dose_mg": 200,  # units, not mg
@@ -102,8 +75,7 @@ class DrugDatabase:
                 "requires_kidney_adjustment": True,
                 "requires_liver_adjustment": False,
             },
-            
-            # ============ ANTIBIOTICS ============
+            # Antibiotics
             "Amoxicillin": {
                 "class": "antibiotic",
                 "max_daily_dose_mg": 3000,
@@ -114,7 +86,6 @@ class DrugDatabase:
                 "requires_kidney_adjustment": True,
                 "requires_liver_adjustment": False,
             },
-            
             "Ciprofloxacin": {
                 "class": "antibiotic",
                 "max_daily_dose_mg": 1500,
@@ -125,8 +96,7 @@ class DrugDatabase:
                 "requires_kidney_adjustment": True,
                 "requires_liver_adjustment": False,
             },
-            
-            # ============ PAIN MEDICATIONS ============
+            # Pain
             "Ibuprofen": {
                 "class": "NSAID",
                 "max_daily_dose_mg": 2400,
@@ -137,7 +107,6 @@ class DrugDatabase:
                 "requires_kidney_adjustment": True,
                 "requires_liver_adjustment": False,
             },
-            
             "Morphine": {
                 "class": "opioid",
                 "max_daily_dose_mg": 200,
@@ -148,8 +117,7 @@ class DrugDatabase:
                 "requires_kidney_adjustment": True,
                 "requires_liver_adjustment": True,
             },
-            
-            # ============ PSYCHIATRIC MEDICATIONS ============
+            # Psychiatric
             "Sertraline": {
                 "class": "SSRI antidepressant",
                 "max_daily_dose_mg": 200,
@@ -160,7 +128,6 @@ class DrugDatabase:
                 "requires_kidney_adjustment": False,
                 "requires_liver_adjustment": True,
             },
-            
             "Lorazepam": {
                 "class": "benzodiazepine",
                 "max_daily_dose_mg": 10,
@@ -171,8 +138,7 @@ class DrugDatabase:
                 "requires_kidney_adjustment": False,
                 "requires_liver_adjustment": True,
             },
-            
-            # ============ OTHER COMMON DRUGS ============
+            # Other
             "Omeprazole": {
                 "class": "proton pump inhibitor",
                 "max_daily_dose_mg": 40,
@@ -183,7 +149,6 @@ class DrugDatabase:
                 "requires_kidney_adjustment": False,
                 "requires_liver_adjustment": True,
             },
-            
             "Atorvastatin": {
                 "class": "statin",
                 "max_daily_dose_mg": 80,
@@ -194,10 +159,9 @@ class DrugDatabase:
                 "requires_kidney_adjustment": False,
                 "requires_liver_adjustment": True,
             },
-            
             "Levothyroxine": {
                 "class": "thyroid hormone",
-                "max_daily_dose_mg": 0.3,  # mcg converted to mg
+                "max_daily_dose_mg": 0.3,
                 "min_daily_dose_mg": 0.025,
                 "contraindications": ["Acute MI", "Thyrotoxicosis"],
                 "interactions": ["Iron supplements", "Calcium", "Antacids"],
@@ -206,145 +170,90 @@ class DrugDatabase:
                 "requires_liver_adjustment": False,
             },
         }
-        
-        # Drug interaction severity levels
+
         self.interaction_severity = {
-            ("Warfarin", "Aspirin"): "critical",  # Major bleeding risk
+            ("Warfarin", "Aspirin"): "critical",
             ("Warfarin", "Ibuprofen"): "critical",
             ("Warfarin", "Clopidogrel"): "critical",
             ("Aspirin", "Ibuprofen"): "warning",
-            ("Lisinopril", "Spironolactone"): "warning",  # Hyperkalemia risk
-            ("Metoprolol", "Verapamil"): "critical",  # Severe bradycardia
-            ("Morphine", "Lorazepam"): "critical",  # Respiratory depression
-            ("Sertraline", "Tramadol"): "warning",  # Serotonin syndrome risk
+            ("Lisinopril", "Spironolactone"): "warning",
+            ("Metoprolol", "Verapamil"): "critical",
+            ("Morphine", "Lorazepam"): "critical",
+            ("Sertraline", "Tramadol"): "warning",
         }
-    
+
     def get_drug_info(self, drug_name: str) -> Optional[Dict]:
-        """Get information about a specific drug"""
         return self.drugs.get(drug_name.title())
-    
+
     def check_interaction(self, drug1: str, drug2: str) -> Optional[Tuple[str, str]]:
-        """
-        Check if two drugs interact.
-        
-        Returns:
-            Tuple of (severity, description) if interaction exists, None otherwise
-        """
-        drug1 = drug1.title()
-        drug2 = drug2.title()
-        
-        # Check in both directions
-        key1 = (drug1, drug2)
-        key2 = (drug2, drug1)
-        
-        severity = self.interaction_severity.get(key1) or self.interaction_severity.get(key2)
-        
+        """Return (severity, description) if an interaction exists, else None."""
+        drug1, drug2 = drug1.title(), drug2.title()
+
+        severity = (
+            self.interaction_severity.get((drug1, drug2))
+            or self.interaction_severity.get((drug2, drug1))
+        )
         if severity:
             return (severity, f"{drug1} and {drug2} interaction")
-        
-        # Also check if drugs are in each other's interaction lists
+
         drug1_info = self.get_drug_info(drug1)
         drug2_info = self.get_drug_info(drug2)
-        
+
         if drug1_info and drug2 in drug1_info.get("interactions", []):
             return ("warning", f"{drug1} interacts with {drug2}")
-        
         if drug2_info and drug1 in drug2_info.get("interactions", []):
             return ("warning", f"{drug2} interacts with {drug1}")
-        
+
         return None
-    
+
     def check_dosage(self, drug_name: str, dosage_mg: float) -> Optional[str]:
-        """
-        Check if dosage is within safe range.
-        
-        Returns:
-            Error message if out of range, None if okay
-        """
+        """Return an error message if dosage is out of range, else None."""
         drug_info = self.get_drug_info(drug_name)
         if not drug_info:
             return f"Unknown drug: {drug_name}"
-        
+
         max_dose = drug_info["max_daily_dose_mg"]
         min_dose = drug_info["min_daily_dose_mg"]
-        
+
         if dosage_mg > max_dose:
             return f"Dosage too high: {dosage_mg}mg exceeds maximum {max_dose}mg"
-        
         if dosage_mg < min_dose:
             return f"Dosage too low: {dosage_mg}mg below minimum {min_dose}mg"
-        
         return None
-    
-    def check_contraindication(
-        self,
-        drug_name: str,
-        patient_conditions: List[str]
-    ) -> Optional[str]:
-        """
-        Check if drug is contraindicated for patient's conditions.
-        
-        Returns:
-            Error message if contraindicated, None if okay
-        """
+
+    def check_contraindication(self, drug_name: str, patient_conditions: List[str]) -> Optional[str]:
+        """Return an error message if the drug is contraindicated, else None."""
         drug_info = self.get_drug_info(drug_name)
         if not drug_info:
             return None
-        
-        contraindications = drug_info.get("contraindications", [])
-        
+
         for condition in patient_conditions:
-            for contraindication in contraindications:
-                if contraindication.lower() in condition.lower():
+            for contra in drug_info.get("contraindications", []):
+                if contra.lower() in condition.lower():
                     return f"{drug_name} contraindicated in {condition}"
-        
         return None
-    
-    def check_allergy(
-        self,
-        drug_name: str,
-        patient_allergies: List[str]
-    ) -> Optional[str]:
-        """
-        Check if patient is allergic to the drug.
-        
-        Returns:
-            Error message if allergic, None if okay
-        """
+
+    def check_allergy(self, drug_name: str, patient_allergies: List[str]) -> Optional[str]:
+        """Return an error message if the patient is allergic, else None."""
         drug_name = drug_name.title()
-        
-        # Direct allergy
+
         if drug_name in [a.title() for a in patient_allergies]:
             return f"Patient allergic to {drug_name}"
-        
-        # Cross-sensitivity (e.g., Penicillin allergy → Amoxicillin)
+
+        # Cross-sensitivity: Penicillin allergy covers Amoxicillin
         if "Penicillin" in patient_allergies and drug_name == "Amoxicillin":
             return f"Patient has Penicillin allergy - {drug_name} contraindicated"
-        
+
         return None
 
 
-# ============================================================================
-# PRESCRIPTION GENERATOR - Creates test cases
-# ============================================================================
-
 class PrescriptionGenerator:
-    """
-    Generates prescription test cases with known issues.
-    
-    Used to create tasks of varying difficulty.
-    """
-    
+    """Generates prescription test cases with known ground-truth issues."""
+
     def __init__(self, drug_db: DrugDatabase):
         self.drug_db = drug_db
-    
+
     def generate_safe_prescription(self) -> Tuple[Dict, Dict]:
-        """
-        Generate a completely safe prescription (no issues).
-        
-        Returns:
-            (prescription_dict, patient_dict)
-        """
         prescription = {
             "patient_id": "P001",
             "prescriber": "Dr. Sarah Johnson",
@@ -360,7 +269,6 @@ class PrescriptionGenerator:
                 }
             ]
         }
-        
         patient = {
             "age": 55,
             "weight_kg": 75,
@@ -370,16 +278,9 @@ class PrescriptionGenerator:
             "kidney_function": "normal",
             "liver_function": "normal"
         }
-        
         return prescription, patient
-    
+
     def generate_interaction_case(self) -> Tuple[Dict, Dict, List[Dict]]:
-        """
-        Generate prescription with drug-drug interaction.
-        
-        Returns:
-            (prescription, patient, ground_truth_issues)
-        """
         prescription = {
             "patient_id": "P002",
             "prescriber": "Dr. Michael Chen",
@@ -403,7 +304,6 @@ class PrescriptionGenerator:
                 }
             ]
         }
-        
         patient = {
             "age": 68,
             "weight_kg": 80,
@@ -413,7 +313,6 @@ class PrescriptionGenerator:
             "kidney_function": "normal",
             "liver_function": "normal"
         }
-        
         issues = [
             {
                 "type": "drug_interaction",
@@ -424,16 +323,9 @@ class PrescriptionGenerator:
                 "recommendation": "Use only one anticoagulant or use under close monitoring"
             }
         ]
-        
         return prescription, patient, issues
-    
+
     def generate_dosage_error(self) -> Tuple[Dict, Dict, List[Dict]]:
-        """
-        Generate prescription with dosage error.
-        
-        Returns:
-            (prescription, patient, ground_truth_issues)
-        """
         prescription = {
             "patient_id": "P003",
             "prescriber": "Dr. Emily Rodriguez",
@@ -449,7 +341,6 @@ class PrescriptionGenerator:
                 }
             ]
         }
-        
         patient = {
             "age": 62,
             "weight_kg": 85,
@@ -459,7 +350,6 @@ class PrescriptionGenerator:
             "kidney_function": "normal",
             "liver_function": "normal"
         }
-        
         issues = [
             {
                 "type": "dosage_too_high",
@@ -469,16 +359,9 @@ class PrescriptionGenerator:
                 "recommendation": "Reduce to maximum 2550mg daily or split into multiple doses"
             }
         ]
-        
         return prescription, patient, issues
-    
+
     def generate_contraindication_case(self) -> Tuple[Dict, Dict, List[Dict]]:
-        """
-        Generate prescription with contraindication.
-        
-        Returns:
-            (prescription, patient, ground_truth_issues)
-        """
         prescription = {
             "patient_id": "P004",
             "prescriber": "Dr. David Kim",
@@ -494,7 +377,6 @@ class PrescriptionGenerator:
                 }
             ]
         }
-        
         patient = {
             "age": 45,
             "weight_kg": 70,
@@ -504,7 +386,6 @@ class PrescriptionGenerator:
             "kidney_function": "normal",
             "liver_function": "normal"
         }
-        
         issues = [
             {
                 "type": "allergy_risk",
@@ -514,16 +395,9 @@ class PrescriptionGenerator:
                 "recommendation": "Switch to non-penicillin antibiotic (e.g., Azithromycin, Ciprofloxacin)"
             }
         ]
-        
         return prescription, patient, issues
-    
+
     def generate_complex_case(self) -> Tuple[Dict, Dict, List[Dict]]:
-        """
-        Generate complex prescription with multiple issues.
-        
-        Returns:
-            (prescription, patient, ground_truth_issues)
-        """
         prescription = {
             "patient_id": "P005",
             "prescriber": "Dr. Jessica Martinez",
@@ -531,14 +405,14 @@ class PrescriptionGenerator:
             "medications": [
                 {
                     "drug": "Warfarin",
-                    "dosage": "15mg",  # TOO HIGH
+                    "dosage": "15mg",
                     "dosage_mg": 15,
                     "frequency": "once daily",
                     "route": "oral",
                     "duration": "ongoing"
                 },
                 {
-                    "drug": "Ibuprofen",  # INTERACTS WITH WARFARIN
+                    "drug": "Ibuprofen",
                     "dosage": "600mg",
                     "dosage_mg": 600,
                     "frequency": "three times daily",
@@ -555,17 +429,15 @@ class PrescriptionGenerator:
                 }
             ]
         }
-        
         patient = {
             "age": 72,
             "weight_kg": 65,
             "conditions": ["Atrial fibrillation", "Type 2 Diabetes", "Osteoarthritis"],
             "allergies": [],
             "current_medications": ["Warfarin", "Metformin"],
-            "kidney_function": "mildly impaired",  # REQUIRES DOSE ADJUSTMENT
+            "kidney_function": "mildly impaired",
             "liver_function": "normal"
         }
-        
         issues = [
             {
                 "type": "dosage_too_high",
@@ -590,9 +462,7 @@ class PrescriptionGenerator:
                 "recommendation": "Consider dose reduction or monitor kidney function closely"
             }
         ]
-        
         return prescription, patient, issues
 
 
-# Global instance
 DRUG_DB = DrugDatabase()

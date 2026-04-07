@@ -1,60 +1,45 @@
-"""
-Medical Prescription Validation - Inference Script
-================================================================================
+"""Inference script for the prescription validation environment.
 
-This script is MANDATORY for hackathon evaluation.
-It MUST follow the exact logging format: [START], [STEP], [END]
-
-DO NOT modify the logging functions!
-DO NOT change the environment variable names!
-
-Author: Suhel Mulla
+Follows the mandatory [START], [STEP], [END] logging format
+required by the OpenEnv hackathon grader.
 """
 
 import os
 import sys
 import asyncio
 import json
+import time
 
 from typing import List, Dict, Any
 from openai import OpenAI
 
-# Add current directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# ============================================================================
-# MANDATORY ENVIRONMENT VARIABLES
-# ============================================================================
-
+# Environment variables (defaults required by hackathon spec)
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api-inference.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 HF_TOKEN = os.getenv("HF_TOKEN")
 IMAGE_NAME = os.getenv("IMAGE_NAME", "suhellll/prescription-validator")
 
-# Task configuration
 TASK_NAME = os.getenv("TASK_NAME", "easy")
 BENCHMARK = "prescription_validator"
 MAX_STEPS = 50
 MAX_TOTAL_REWARD = 5.0
 SUCCESS_SCORE_THRESHOLD = 0.7
 
-# LLM settings
-TEMPERATURE = 0.3  # Lower = more deterministic (better for medical decisions)
+TEMPERATURE = 0.3
 MAX_TOKENS = 512
 
 
-# ============================================================================
-# MANDATORY LOGGING FUNCTIONS (DO NOT MODIFY!)
-# ============================================================================
+# ---------------------------------------------------------------------------
+# Logging helpers — exact format required by the grader, do not modify
+# ---------------------------------------------------------------------------
 
 def log_start(task: str, env: str, model: str):
-    """Log episode start - EXACT FORMAT REQUIRED"""
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
 
 def log_step(step: int, action: str, reward: float, done: bool, error=None):
-    """Log each step - EXACT FORMAT REQUIRED"""
-    # Escape special characters in action string
     action_str = str(action).replace('\n', ' ').replace('\r', '')
     reward_fmt = f"{reward:.2f}"
     done_fmt = "true" if done else "false"
@@ -63,15 +48,14 @@ def log_step(step: int, action: str, reward: float, done: bool, error=None):
 
 
 def log_end(success: bool, steps: int, rewards: list):
-    """Log episode end - EXACT FORMAT REQUIRED"""
     success_fmt = "true" if success else "false"
     rewards_fmt = ",".join(f"{r:.2f}" for r in rewards)
     print(f"[END] success={success_fmt} steps={steps} rewards={rewards_fmt}", flush=True)
 
 
-# ============================================================================
-# SYSTEM PROMPT - Medical Expert Instructions
-# ============================================================================
+# ---------------------------------------------------------------------------
+# System prompt
+# ---------------------------------------------------------------------------
 
 SYSTEM_PROMPT = """You are an expert clinical pharmacist reviewing prescriptions for safety.
 
@@ -161,57 +145,39 @@ No explanations outside the JSON.
 """
 
 
-# ============================================================================
-# HELPER FUNCTIONS
-# ============================================================================
+# ---------------------------------------------------------------------------
+# Prompt construction and response parsing
+# ---------------------------------------------------------------------------
 
 def build_user_prompt(observation: Dict[str, Any], history: List[str]) -> str:
-    """
-    Build detailed prompt from observation.
-    
-    Args:
-        observation: Current environment observation
-        history: Previous actions and results
-    
-    Returns:
-        Formatted prompt string
-    """
     prescription = observation.get("prescription", {})
     patient = observation.get("patient_info", {})
     feedback = observation.get("feedback", "")
-    validation_results = observation.get("validation_results", [])
     current_issues = observation.get("current_issues", [])
-    
-    # Format medications
+
     meds_text = []
     for med in prescription.get("medications", []):
         meds_text.append(
-            f"  • {med.get('drug')}: {med.get('dosage')} {med.get('frequency')} "
+            f"  - {med.get('drug')}: {med.get('dosage')} {med.get('frequency')} "
             f"({med.get('route')}) for {med.get('duration')}"
         )
     meds_str = "\n".join(meds_text) if meds_text else "  None"
-    
-    # Format patient conditions
+
     conditions_str = ", ".join(patient.get("conditions", [])) or "None"
     allergies_str = ", ".join(patient.get("allergies", [])) or "None"
     current_meds_str = ", ".join(patient.get("current_medications", [])) or "None"
-    
-    # Format issues already found
+
     issues_str = "None yet"
     if current_issues:
         issues_list = [
-            f"  • {issue.get('drug')}: {issue.get('issue')} ({issue.get('severity')})"
+            f"  - {issue.get('drug')}: {issue.get('issue')} ({issue.get('severity')})"
             for issue in current_issues
         ]
         issues_str = "\n".join(issues_list)
-    
-    # Recent history
+
     history_text = "\n".join(history[-5:]) if history else "None"
-    
-    prompt = f"""
-═══════════════════════════════════════════════════════════════
-PRESCRIPTION TO REVIEW
-═══════════════════════════════════════════════════════════════
+
+    return f"""PRESCRIPTION TO REVIEW
 
 PATIENT INFORMATION:
   Age: {patient.get('age')} years
@@ -234,102 +200,45 @@ LAST FEEDBACK:
 RECENT ACTIONS:
 {history_text}
 
-═══════════════════════════════════════════════════════════════
-
 Carefully analyze this prescription for safety.
 Check EACH medication against patient allergies, conditions, and other drugs.
-Respond with JSON action only.
-"""
-    
-    return prompt.strip()
+Respond with JSON action only."""
 
 
 def parse_llm_response(text: str) -> Dict[str, Any]:
-    """
-    Parse LLM response into action dictionary.
-    
-    Args:
-        text: Raw LLM output
-    
-    Returns:
-        Action dictionary
-    """
-    # Try to extract JSON from response
+    """Extract a valid action dict from the LLM response text."""
     try:
-        # Look for JSON object in response
         start = text.find('{')
         end = text.rfind('}') + 1
-        
         if start >= 0 and end > start:
-            json_str = text[start:end]
-            action_dict = json.loads(json_str)
-            
-            # Validate required field
+            action_dict = json.loads(text[start:end])
             if "action_type" in action_dict:
                 return action_dict
     except json.JSONDecodeError:
         pass
     except Exception as e:
         print(f"[DEBUG] Parse error: {e}", flush=True)
-    
-    # Fallback: try to detect action type from text
+
+    # Fallback: detect action intent from free-text
     text_lower = text.lower()
-    
     if "approve" in text_lower and "safe" in text_lower:
-        return {
-            "action_type": "approve",
-            "recommendation": "Prescription appears safe based on available information"
-        }
-    elif "interaction" in text_lower:
-        return {
-            "action_type": "flag_interaction",
-            "severity": "warning",
-            "recommendation": "Potential drug interaction detected"
-        }
-    elif "dosage" in text_lower or "dose" in text_lower:
-        return {
-            "action_type": "flag_dosage",
-            "severity": "warning",
-            "recommendation": "Dosage may need adjustment"
-        }
-    elif "allergy" in text_lower or "allergic" in text_lower:
-        return {
-            "action_type": "flag_allergy",
-            "severity": "critical",
-            "recommendation": "Patient may be allergic to prescribed medication"
-        }
-    elif "contraindication" in text_lower:
-        return {
-            "action_type": "flag_contraindication",
-            "severity": "warning",
-            "recommendation": "Medication may be contraindicated"
-        }
-    
-    # Final fallback: request clarification
-    return {
-        "action_type": "request_clarification",
-        "recommendation": "Need more information to assess safety"
-    }
+        return {"action_type": "approve", "recommendation": "Prescription appears safe based on available information"}
+    if "interaction" in text_lower:
+        return {"action_type": "flag_interaction", "severity": "warning", "recommendation": "Potential drug interaction detected"}
+    if "dosage" in text_lower or "dose" in text_lower:
+        return {"action_type": "flag_dosage", "severity": "warning", "recommendation": "Dosage may need adjustment"}
+    if "allergy" in text_lower or "allergic" in text_lower:
+        return {"action_type": "flag_allergy", "severity": "critical", "recommendation": "Patient may be allergic to prescribed medication"}
+    if "contraindication" in text_lower:
+        return {"action_type": "flag_contraindication", "severity": "warning", "recommendation": "Medication may be contraindicated"}
+
+    return {"action_type": "request_clarification", "recommendation": "Need more information to assess safety"}
 
 
-def get_llm_action(
-    client: OpenAI,
-    observation: Dict[str, Any],
-    history: List[str]
-) -> Dict[str, Any]:
-    """
-    Get action from LLM.
-    
-    Args:
-        client: OpenAI client
-        observation: Current environment observation
-        history: Action history
-    
-    Returns:
-        Action dictionary
-    """
+def get_llm_action(client: OpenAI, observation: Dict[str, Any], history: List[str]) -> Dict[str, Any]:
+    """Query the LLM for a clinical action given the current observation."""
     user_prompt = build_user_prompt(observation, history)
-    
+
     try:
         completion = client.chat.completions.create(
             model=MODEL_NAME,
@@ -340,76 +249,55 @@ def get_llm_action(
             temperature=TEMPERATURE,
             max_tokens=MAX_TOKENS,
         )
-        
         response_text = (completion.choices[0].message.content or "").strip()
         action_dict = parse_llm_response(response_text)
-        
-        import time
-        time.sleep(2)  # Prevent burning rate limit
+        time.sleep(2)
         return action_dict
-    
+
     except Exception as e:
         print(f"[DEBUG] LLM request failed: {e}", flush=True)
-        action_dict = {
-            "action_type": "request_clarification",
-            "recommendation": f"Error getting LLM response: {e}"
-        }
-        import time
-        time.sleep(2)  # Prevent burning rate limit on error
-        return action_dict
+        time.sleep(2)
+        return {"action_type": "request_clarification", "recommendation": f"Error getting LLM response: {e}"}
 
 
-# ============================================================================
-# MAIN INFERENCE LOOP
-# ============================================================================
+# ---------------------------------------------------------------------------
+# Main inference loop
+# ---------------------------------------------------------------------------
 
 async def main():
-    """Run inference on the prescription validation environment"""
-    
-    # Import environment client
     from client import PrescriptionValidationEnv
     from models import PrescriptionAction
-    
-    # Initialize OpenAI client
+
     if HF_TOKEN is None:
         raise ValueError("HF_TOKEN environment variable is required")
-    
+
     client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
-    
-    # Tracking
+
     history: List[str] = []
     rewards: List[float] = []
     steps_taken = 0
     score = 0.0
     success = False
-    
+
     log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
-    
+
     try:
-        # Connect to environment
         hf_url = f"https://{IMAGE_NAME.replace('/', '-')}.hf.space"
         print(f"[DEBUG] Connecting to HuggingFace Space: {hf_url}", flush=True)
-        
+
         async with PrescriptionValidationEnv(base_url=hf_url) as env:
             print("[DEBUG] Connected to environment", flush=True)
-            
-            # Reset environment with specified task
+
             result = await env.reset(task_id=TASK_NAME)
             print(f"[DEBUG] Environment reset: {result.observation.feedback}", flush=True)
-            
-            # Run episode
+
             for step in range(1, MAX_STEPS + 1):
                 if result.done:
-                    print(f"[DEBUG] Episode finished at step {step}", flush=True)
                     break
-                
-                # Get observation as dict
+
                 obs_dict = result.observation.model_dump()
-                
-                # Get action from LLM
                 action_dict = get_llm_action(client, obs_dict, history)
-                
-                # Create typed action
+
                 try:
                     action = PrescriptionAction(**action_dict)
                 except Exception as e:
@@ -418,16 +306,13 @@ async def main():
                         action_type="request_clarification",
                         recommendation="Action parsing error"
                     )
-                
-                # Take step in environment
+
                 result = await env.step(action)
-                
-                # Track reward
+
                 reward = result.reward or 0.0
                 rewards.append(reward)
                 steps_taken = step
-                
-                # Log step
+
                 log_step(
                     step=step,
                     action=json.dumps(action_dict),
@@ -435,36 +320,29 @@ async def main():
                     done=result.done,
                     error=None
                 )
-                
-                # Update history
+
                 history.append(
-                    f"Step {step}: {action_dict.get('action_type')} → "
+                    f"Step {step}: {action_dict.get('action_type')} -> "
                     f"reward={reward:.2f}, feedback: {result.observation.feedback[:100]}"
                 )
-                
+
                 if result.done:
                     break
-        
-        # Calculate final score (0.0 to 1.0)
+
         total_reward = sum(rewards)
         score = total_reward / MAX_TOTAL_REWARD if MAX_TOTAL_REWARD > 0 else 0.0
-        score = min(max(score, 0.0), 1.0)  # Clamp to [0, 1]
-        
+        score = min(max(score, 0.0), 1.0)
         success = score >= SUCCESS_SCORE_THRESHOLD
-        
+
         print(f"[DEBUG] Final score: {score:.3f}, Success: {success}", flush=True)
-    
+
     except Exception as e:
         print(f"[DEBUG] Error during inference: {e}", flush=True)
         import traceback
         traceback.print_exc()
-    
+
     log_end(success=success, steps=steps_taken, rewards=rewards)
 
-
-# ============================================================================
-# ENTRY POINT
-# ============================================================================
 
 if __name__ == "__main__":
     asyncio.run(main())
