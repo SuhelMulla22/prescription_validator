@@ -12,6 +12,8 @@ tags:
 
 # Medical Prescription Validation Environment
 
+**🎥 [Watch the 2-Minute Demo Video](https://drive.google.com/file/d/1iEd4d98U0d2udv3411JHuKzx-IecQP9G/view?usp=sharing)**
+
 A reinforcement learning environment for training AI agents to detect medication errors.
 Agents review prescriptions for drug interactions, dosage errors, contraindications,
 and allergy risks, acting as a clinical pharmacist safety layer.
@@ -27,11 +29,11 @@ these real-world clinical safety tasks.
 
 ## Tasks
 
-| Task     | Difficulty | Description                             | Medications | Issues | Expected Steps |
-| -------- | ---------- | --------------------------------------- | ----------- | ------ | -------------- |
-| easy     | Low        | Single drug, 0–1 simple issues          | 1           | 0–1    | 3–5            |
-| medium   | Medium     | Multi-drug with interactions            | 2–3         | 1–2    | 5–10           |
-| hard     | High       | Complex patient, multiple issues        | 4+          | 2–4    | 10–20          |
+| Task   | Difficulty | Description                      | Medications | Issues | Expected Steps |
+| ------ | ---------- | -------------------------------- | ----------- | ------ | -------------- |
+| easy   | Low        | Single drug, 0–1 simple issues   | 1           | 0–1    | 3–5            |
+| medium | Medium     | Multi-drug with interactions     | 2–3         | 1–2    | 5–10           |
+| hard   | High       | Complex patient, multiple issues | 4+          | 2–4    | 10–20          |
 
 ### Examples
 
@@ -83,15 +85,15 @@ class PrescriptionObservation(Observation):
 
 ## Reward Structure
 
-| Action             | Outcome           | Reward | Rationale                   |
-| ------------------ | ----------------- | ------ | --------------------------- |
-| Flag critical      | Correctly found   | +1.0   | Prevented patient harm      |
-| Flag warning       | Correctly found   | +0.5   | Caught potential issue      |
-| Approve            | Prescription safe | +1.0   | Correct clinical judgment   |
-| Approve            | Has issues        | -1.0   | Patient at risk             |
-| Flag issue         | False positive    | -0.2   | Unnecessary delay in care   |
-| Reject             | Prescription safe | -0.5   | Unnecessary rejection       |
-| Good recommendation| Detailed plan     | +0.1   | Better patient care (bonus) |
+| Action              | Outcome           | Reward | Rationale                   |
+| ------------------- | ----------------- | ------ | --------------------------- |
+| Flag critical       | Correctly found   | +1.0   | Prevented patient harm      |
+| Flag warning        | Correctly found   | +0.5   | Caught potential issue      |
+| Approve             | Prescription safe | +1.0   | Correct clinical judgment   |
+| Approve             | Has issues        | -1.0   | Patient at risk             |
+| Flag issue          | False positive    | -0.2   | Unnecessary delay in care   |
+| Reject              | Prescription safe | -0.5   | Unnecessary rejection       |
+| Good recommendation | Detailed plan     | +0.1   | Better patient care (bonus) |
 
 Success threshold: score >= 0.7 (70% safety rating).
 
@@ -131,12 +133,12 @@ curl http://localhost:7860/health   # {"status":"healthy"}
 
 ### Environment Variables
 
-| Variable                       | Default   | Description      |
-| ------------------------------ | --------- | ---------------- |
-| `PORT`                         | `7860`    | Server port      |
-| `HOST`                         | `0.0.0.0` | Bind address     |
-| `WORKERS`                      | `4`       | Uvicorn workers  |
-| `OPENENV_ENABLE_WEB_INTERFACE` | `false`   | Enable web UI    |
+| Variable                       | Default   | Description     |
+| ------------------------------ | --------- | --------------- |
+| `PORT`                         | `7860`    | Server port     |
+| `HOST`                         | `0.0.0.0` | Bind address    |
+| `WORKERS`                      | `4`       | Uvicorn workers |
+| `OPENENV_ENABLE_WEB_INTERFACE` | `false`   | Enable web UI   |
 
 ## Running Inference
 
@@ -170,14 +172,14 @@ Expected output:
 
 14 common medications across 6 categories:
 
-| Category       | Drugs                                          |
-| -------------- | ---------------------------------------------- |
-| Cardiovascular | Warfarin, Aspirin, Lisinopril, Metoprolol      |
-| Diabetes       | Metformin, Insulin                             |
-| Antibiotics    | Amoxicillin, Ciprofloxacin                     |
-| Pain           | Ibuprofen, Morphine                            |
-| Psychiatric    | Sertraline, Lorazepam                          |
-| Other          | Omeprazole, Atorvastatin, Levothyroxine        |
+| Category       | Drugs                                     |
+| -------------- | ----------------------------------------- |
+| Cardiovascular | Warfarin, Aspirin, Lisinopril, Metoprolol |
+| Diabetes       | Metformin, Insulin                        |
+| Antibiotics    | Amoxicillin, Ciprofloxacin                |
+| Pain           | Ibuprofen, Morphine                       |
+| Psychiatric    | Sertraline, Lorazepam                     |
+| Other          | Omeprazole, Atorvastatin, Levothyroxine   |
 
 Each drug includes safe dose ranges, known interactions, contraindications, and
 organ function requirements. Data is simplified from FDA drug interaction guidelines
