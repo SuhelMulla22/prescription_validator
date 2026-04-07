@@ -5,155 +5,250 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Medical Prescription Validator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #ffffff; /* Very clean white/light gray background */
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc; /* Beautiful clean slate background */
+            color: #0f172a;
         }
-        .block-container {
-            border: 1px solid #e5e7eb;
-            border-radius: 0.375rem;
-            padding: 1.25rem;
-            margin-bottom: 1.25rem;
+        .glass-card {
             background-color: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            overflow: hidden;
         }
         .header-title { 
-            font-weight: 700; 
+            font-weight: 600; 
             font-size: 1.125rem; 
-            margin-bottom: 1rem; 
-            color: #111827;
+            color: #1e293b; 
+            margin-bottom: 1.25rem; 
+            display: flex; 
+            align-items: center;
         }
-        .input-field {
-            border: 1px solid #d1d5db;
-            border-radius: 0.25rem;
-            padding: 0.5rem 0.75rem;
+        
+        .input-base {
             width: 100%;
+            border: 1px solid #cbd5e1;
+            border-radius: 0.5rem;
+            padding: 0.625rem 0.75rem;
             font-size: 0.875rem;
+            color: #334155;
+            background-color: #f8fafc;
+            transition: all 0.2s ease;
             outline: none;
-            transition: border-color 0.15s ease-in-out;
         }
-        .input-field:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 1px #3b82f6;
+        .input-base:focus { 
+            border-color: #3b82f6; 
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); 
+            background-color: #ffffff; 
         }
-        .btn-blue { 
-            background-color: #0d6efd; 
-            color: white; 
-            padding: 0.375rem 1.25rem; 
-            border-radius: 0.25rem; 
-            font-weight: 500; 
-            font-size: 0.875rem; 
-            border: none; 
-            cursor: pointer; 
-        }
-        .btn-blue:hover { background-color: #0b5ed7; }
         
-        .btn-gray { 
-            background-color: #6c757d; 
-            color: white; 
-            padding: 0.375rem 1.25rem; 
-            border-radius: 0.25rem; 
-            font-weight: 500; 
-            font-size: 0.875rem; 
-            border: none; 
-            cursor: pointer; 
-        }
-        .btn-gray:hover { background-color: #5c636a; }
-        
-        .muted-box { 
-            background-color: #f9fafb; 
-            border: 1px solid #e5e7eb; 
-            border-radius: 0.25rem; 
-            padding: 0.75rem 1rem; 
-            font-size: 0.875rem; 
-            color: #374151; 
-            white-space: pre-wrap; 
-            word-wrap: break-word;
-            word-break: break-all;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; 
-            min-height: 60px;
-        }
         .label { 
+            display: block; 
             font-size: 0.875rem; 
             font-weight: 500; 
-            color: #374151; 
+            color: #475569; 
             margin-bottom: 0.375rem; 
-            display: inline-block; 
         }
+        
+        .btn-primary { 
+            background-color: #2563eb; 
+            color: white; 
+            border-radius: 0.5rem; 
+            padding: 0.625rem 1.25rem; 
+            font-weight: 600; 
+            font-size: 0.875rem; 
+            width: 100%; 
+            transition: background-color 0.2s; 
+            cursor: pointer; 
+        }
+        .btn-primary:hover:not(:disabled) { background-color: #1d4ed8; }
+        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
+        
+        .btn-secondary { 
+            background-color: #f1f5f9; 
+            color: #475569; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 0.5rem; 
+            padding: 0.5rem 1rem; 
+            font-weight: 500; 
+            font-size: 0.875rem; 
+            transition: all 0.2s; 
+            cursor: pointer; 
+        }
+        .btn-secondary:hover:not(:disabled) { background-color: #e2e8f0; color: #1e293b; }
+        .btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .json-box {
+            background-color: #f8fafc; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 0.5rem; 
+            padding: 1rem;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.8125rem; 
+            color: #334155; 
+            white-space: pre-wrap; 
+            word-wrap: break-word; 
+            word-break: break-all;
+            height: clamp(300px, 50vh, 500px); 
+            overflow-y: auto;
+        }
+
+        /* Custom scrollbar for better look */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="p-4 md:p-8">
-    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
-        
-        <!-- Left Column -->
-        <div>
-            <div class="flex items-center mb-4">
-                <div class="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div>
-                <h1 class="font-bold text-sm text-gray-900">Pharmacist Action Interface</h1>
+<body class="min-h-screen p-4 md:p-8">
+    <div class="max-w-7xl mx-auto flex flex-col h-full gap-6">
+        <!-- Main Header -->
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-gray-200 pb-4 gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Medical Prescription Validator</h1>
+                <p class="text-sm text-slate-500 mt-1 font-medium">Professional Clinical OpenEnv Interface</p>
             </div>
+            <div class="flex items-center space-x-4 bg-white px-6 py-3 rounded-lg border border-slate-200 shadow-sm">
+                <div class="text-center sm:text-right">
+                    <div class="text-[0.65rem] text-slate-500 font-bold uppercase tracking-wider mb-1">Total Episode Reward</div>
+                    <div class="text-2xl font-bold text-blue-600 leading-none" id="val-reward">0.00</div>
+                </div>
+            </div>
+        </header>
 
-            <!-- Take Action -->
-            <div class="block-container shadow-sm">
-                <h2 class="header-title">Take Action</h2>
-                <div class="mb-4">
-                    <label class="label">Action Json <span class="text-red-500">*</span>:</label>
-                    <input type="text" id="input-json" class="input-field" placeholder="Enter action json..." value='{"action": {"action_type": "approve", "drug_name": "", "recommendation": ""}}'>
-                    <div class="text-[0.75rem] text-gray-500 mt-2 font-mono leading-relaxed">
-                        JSON action: {"action": {"action_type": "", "drug_name": "", "recommendation": ""}}.<br>
-                        Actions: approve, flag_interaction, flag_dosage, flag_contraindication, flag_allergy, reject, request_clarification
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- Left Panel (Actions) -->
+            <div class="lg:col-span-5 space-y-6">
+                <!-- Environment Controls -->
+                <div class="glass-card p-6 bg-slate-50">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Metrics & Controls</h2>
+                        <button id="btn-reset" class="btn-secondary text-xs flex items-center shadow-sm">
+                            <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            Start New Patient
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 text-sm font-medium">
+                        <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between">
+                            <span class="text-slate-500 text-xs">Status</span>
+                            <span id="val-status" class="text-amber-600 font-semibold text-xs bg-amber-50 px-2 py-0.5 rounded-full">Waiting</span>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between">
+                            <span class="text-slate-500 text-xs">Steps</span>
+                            <span id="val-step" class="text-slate-800 font-bold bg-slate-100 px-2 py-0.5 rounded-full">0</span>
+                        </div>
                     </div>
                 </div>
-                <button id="btn-step" class="btn-blue">Step</button>
-            </div>
 
-            <!-- Action Buttons -->
-            <div class="flex space-x-2 mb-6">
-                <button id="btn-reset" class="btn-gray">Reset Environment</button>
-                <button id="btn-state" class="btn-gray">Get State</button>
-            </div>
+                <!-- Action Controls -->
+                <div class="glass-card p-6">
+                    <h2 class="header-title border-b border-slate-100 pb-3 mb-4">
+                        <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        Pharmacist Evaluation
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="label">Action Type</label>
+                            <select id="input-action" class="input-base font-medium text-slate-700">
+                                <option value="approve">Approve (No issues)</option>
+                                <option value="flag_interaction">Flag Interaction</option>
+                                <option value="flag_dosage">Flag Dosage</option>
+                                <option value="flag_contraindication">Flag Contraindication</option>
+                                <option value="flag_allergy">Flag Allergy</option>
+                                <option value="reject">Reject Prescription</option>
+                                <option value="request_clarification">Request Clarification</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="label">Target Drug Name <span class="font-normal text-slate-400 text-xs ml-1">(Optional if approving)</span></label>
+                            <input type="text" id="input-drug" class="input-base" placeholder="e.g. Warfarin, Aspirin">
+                        </div>
+                        <div>
+                            <label class="label">Clinical Recommendation <span class="font-normal text-slate-400 text-xs ml-1">(Optional)</span></label>
+                            <input type="text" id="input-recommendation" class="input-base" placeholder="e.g. Decrease dosage to 50mg">
+                        </div>
+                    </div>
 
-            <!-- Current State -->
-            <div class="block-container shadow-sm">
-                <h2 class="header-title">Current State</h2>
-                <div class="text-[0.875rem] text-gray-700 space-y-1.5 font-sans font-medium">
-                    <div>Status: <span id="val-status" class="font-normal font-mono">Reset</span></div>
-                    <div>Episode ID: <span id="val-episode" class="font-normal font-mono">-</span></div>
-                    <div>Step Count: <span id="val-step" class="font-normal font-mono">0</span></div>
-                    <div>Reward: <span id="val-reward" class="font-normal font-mono">-</span></div>
+                    <button id="btn-submit" class="btn-primary mt-6 group flex justify-center items-center shadow-md">
+                        Submit Action
+                        <svg class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                    </button>
+                    
+                    <div id="action-feedback" class="mt-5 text-sm font-medium hidden rounded-lg p-3.5 border text-center"></div>
                 </div>
             </div>
+
+            <!-- Right Panel (Observation) -->
+            <div class="lg:col-span-7 h-full">
+                <div class="glass-card flex flex-col h-full bg-white">
+                    <!-- Tab Headers -->
+                    <div class="flex border-b border-slate-200 bg-slate-50/50">
+                        <button class="px-6 py-4 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 bg-white" id="tab-obs">Observation (Patient Data)</button>
+                        <button class="px-6 py-4 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors" id="tab-hist">Action Sequence Logs</button>
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="p-6 flex-grow">
+                        <!-- Observation Tab -->
+                        <div id="view-obs">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs text-slate-500 uppercase tracking-widest font-bold">Real-time Environment State JSON</span>
+                            </div>
+                            <div id="box-obs" class="json-box">Click "Start New Patient" in the left panel to initialize.</div>
+                        </div>
+                        
+                        <!-- History Tab -->
+                        <div id="view-hist" class="hidden">
+                            <div class="flex items-center justify-between mb-3">
+                                <span class="text-xs text-slate-500 uppercase tracking-widest font-bold">Episode Audit Trail</span>
+                            </div>
+                            <div id="box-history" class="json-box bg-slate-800 text-slate-300 border-slate-700 shadow-inner">No actions taken in this episode.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
-
-        <!-- Right Column (Border separated slightly conceptually but using blocks) -->
-        <div class="md:pl-4 md:border-l border-gray-100">
-            <div class="flex items-center mb-4">
-                <h1 class="font-bold text-sm text-gray-900">Clinical Validation Observer</h1>
-            </div>
-
-            <!-- Current Observation -->
-            <div class="block-container shadow-sm">
-                <h2 class="header-title">Current Observation</h2>
-                <div id="box-obs" class="muted-box text-sm">No observation yet</div>
-            </div>
-
-            <!-- Action History -->
-            <div class="block-container shadow-sm">
-                <h2 class="header-title">Action History</h2>
-                <div id="box-history" class="muted-box text-sm">No actions taken yet</div>
-            </div>
-        </div>
-
     </div>
 
     <script>
         const $ = id => document.getElementById(id);
+        
         let stepCount = 0;
         let actionHistory = [];
-        let episodeId = Date.now().toString(36);
+        let currentTotalReward = 0.0;
         
-        function formatVal(val) {
-            if (val === undefined || val === null) return '-';
-            return val;
+        // Tab switching logic
+        $('tab-obs').onclick = () => {
+            $('view-obs').classList.remove('hidden');
+            $('view-hist').classList.add('hidden');
+            $('tab-obs').className = "px-6 py-4 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 bg-white";
+            $('tab-hist').className = "px-6 py-4 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors";
+        };
+        $('tab-hist').onclick = () => {
+            $('view-obs').classList.add('hidden');
+            $('view-hist').classList.remove('hidden');
+            $('tab-obs').className = "px-6 py-4 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors";
+            $('tab-hist').className = "px-6 py-4 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 bg-white";
+        };
+
+        function showFeedback(msg, type) {
+            const el = $('action-feedback');
+            el.textContent = msg;
+            el.className = 'mt-5 text-sm font-medium rounded-lg p-3.5 border text-center transition-all duration-300';
+            
+            if (type === 'error') {
+                el.classList.add('bg-red-50', 'text-red-700', 'border-red-200');
+            } else if (type === 'success') {
+                el.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+            } else {
+                el.classList.add('bg-amber-50', 'text-amber-700', 'border-amber-200');
+            }
         }
 
         async function updateDisplay(data, actionPayload = null) {
@@ -161,35 +256,65 @@
             const reward = data.reward != null ? data.reward : null;
             const done = data.done === true;
             
-            $('val-status').textContent = done ? 'Done' : 'Active';
-            $('val-step').textContent = stepCount.toString();
-            $('val-episode').textContent = episodeId;
-            if (reward !== null) {
-                // Keep keeping track of total reward internally if needed, or just display step reward.
-                $('val-reward').textContent = reward.toFixed(2);
+            // Status Tag updating
+            const statusEl = $('val-status');
+            if (done) {
+                statusEl.textContent = 'DONE: Complete';
+                statusEl.className = 'text-blue-700 font-bold text-xs bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-full';
+            } else {
+                statusEl.textContent = 'Active Patient';
+                statusEl.className = 'text-emerald-700 font-bold text-xs bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-full';
             }
             
-            // Format observation JSON nicely
+            $('val-step').textContent = stepCount.toString();
+            
+            if (reward !== null) {
+                currentTotalReward += reward;
+                // Animate reward text briefly
+                const rewardEl = $('val-reward');
+                rewardEl.textContent = currentTotalReward.toFixed(2);
+                rewardEl.classList.add('opacity-50', 'scale-105');
+                setTimeout(() => rewardEl.classList.remove('opacity-50', 'scale-105'), 200);
+            }
+            
             $('box-obs').textContent = JSON.stringify(obs, null, 2);
             
             if (actionPayload) {
                 actionHistory.push({
                     step: stepCount,
                     action: actionPayload,
-                    reward: formatVal(reward),
+                    reward: reward !== null ? reward : '-',
                     done: done
                 });
                 
                 $('box-history').textContent = actionHistory.map(h => 
-                    `[Step ${h.step}] Action: ${JSON.stringify(h.action)}\n-> Reward: ${h.reward} | Done: ${h.done}`
-                ).join('\n\n');
+                    `[STEP ${h.step}]\nACTION: ${JSON.stringify(h.action)}\n=> REWARD: ${Number(h.reward).toFixed(2)} | DONE: ${h.done}\n${'-'.repeat(45)}`
+                ).reverse().join('\n\n'); // Reverse to show latest first
+                
+                // Show feedback from environment if present
+                const envFeedback = obs.feedback || '';
+                if (envFeedback) {
+                    if (envFeedback.includes('✅') || envFeedback.toLowerCase().includes('success')) {
+                        showFeedback(envFeedback, 'success');
+                    } else if (envFeedback.includes('❌') || envFeedback.includes('DANGEROUS')) {
+                        showFeedback(envFeedback, 'error');
+                    } else {
+                        showFeedback(envFeedback, 'warn');
+                    }
+                } else {
+                    showFeedback(`Action stepped. Reward: ${reward}`, reward > 0 ? 'success' : 'warn');
+                }
             } else if (actionHistory.length === 0) {
-                $('box-history').textContent = "No actions taken yet";
+                $('box-history').textContent = "No actions taken in this episode.";
             }
         }
 
         $('btn-reset').onclick = async () => {
-            $('box-obs').textContent = "Loading...";
+            $('box-obs').textContent = "Loading patient data...";
+            $('action-feedback').classList.add('hidden');
+            $('btn-reset').disabled = true;
+            $('btn-submit').disabled = false;
+            
             try {
                 const res = await fetch('/reset', {
                     method: 'POST',
@@ -199,25 +324,44 @@
                 const data = await res.json();
                 
                 stepCount = 0;
+                currentTotalReward = 0.0;
                 actionHistory = [];
-                episodeId = Date.now().toString(36);
-                $('val-status').textContent = 'Reset';
-                $('val-reward').textContent = '-';
+                $('val-reward').textContent = "0.00";
                 
                 updateDisplay(data);
+                showFeedback("New patient initialized. Ready for review.", "success");
+                
+                $('input-drug').value = '';
+                $('input-recommendation').value = '';
+                $('input-action').value = 'approve';
+                
+                $('tab-obs').click();
             } catch (e) {
                 $('box-obs').textContent = 'Error resetting environment:\n' + e.message;
+                showFeedback("Failed to connect to backend.", "error");
             }
+            $('btn-reset').disabled = false;
         };
 
-        $('btn-step').onclick = async () => {
-            let actionPayload;
-            try {
-                actionPayload = JSON.parse($('input-json').value);
-            } catch (e) {
-                alert("Invalid JSON action formatting. Please ensure it's valid JSON.");
+        $('btn-submit').onclick = async () => {
+            if ($('val-status').textContent.includes('Waiting')) {
+                showFeedback("Please click 'Start New Patient' first.", "warn");
                 return;
             }
+        
+            const btn = $('btn-submit');
+            btn.disabled = true;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline border-2 border-t-white border-transparent rounded-full" viewBox="0 0 24 24"></svg> Processing...`;
+            
+            const innerAction = {
+                action_type: $('input-action').value,
+                recommendation: $('input-recommendation').value || 'No recommendation'
+            };
+            if ($('input-drug').value) {
+                innerAction.drug_name = $('input-drug').value;
+            }
+            const actionPayload = { action: innerAction };
             
             try {
                 const res = await fetch('/step', {
@@ -227,29 +371,22 @@
                 });
                 const data = await res.json();
                 
-                if (!res.ok) {
-                    throw new Error(JSON.stringify(data));
-                }
+                if (!res.ok) throw new Error(JSON.stringify(data));
                 
                 stepCount++;
-                updateDisplay(data, actionPayload);
-            } catch (e) {
-                alert('Action step failed: ' + e.message);
-            }
-        };
-
-        $('btn-state').onclick = async () => {
-            try {
-                const res = await fetch('/state', { method: 'GET' });
-                if (res.ok) {
-                    const data = await res.json();
-                    alert("State Object:\n\n" + JSON.stringify(data, null, 2));
-                } else {
-                    alert("State endpoint returned an error.");
+                updateDisplay(data, innerAction);
+                
+                if (data.done === true || (data.observation && data.observation.done === true)) {
+                    btn.disabled = true; // Keep disabled if episode over
+                    btn.innerHTML = `Episode Complete`;
+                    return;
                 }
             } catch (e) {
-                alert("Error fetching state: " + e.message);
+                showFeedback('Network Error: ' + e.message, 'error');
             }
+            
+            btn.disabled = false;
+            btn.innerHTML = originalText;
         };
     </script>
 </body>
