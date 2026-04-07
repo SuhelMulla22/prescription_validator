@@ -26,3 +26,12 @@ async def serve_ui():
             return f.read()
     except FileNotFoundError:
         return "<h1>Interface Building...</h1>"
+
+def main():
+    import uvicorn
+    # Configured for Hugging Face Spaces port, defaulting to 7860
+    port = int(os.environ.get("PORT", 7860))
+    uvicorn.run("server.app:app", host="0.0.0.0", port=port)
+
+if __name__ == "__main__":
+    main()

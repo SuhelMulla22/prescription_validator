@@ -17,6 +17,9 @@ dependencies = [
     "python-multipart>=0.0.6",
 ]
 
+[project.scripts]
+server = "server.app:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
