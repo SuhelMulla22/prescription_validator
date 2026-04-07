@@ -3,144 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prescription Validator UI</title>
+    <title>Medical Prescription Validator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #f8fafc; }
-        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .loading { animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #ffffff; /* Very clean white/light gray background */
+        }
+        .block-container {
+            border: 1px solid #e5e7eb;
+            border-radius: 0.375rem;
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+            background-color: #ffffff;
+        }
+        .header-title { 
+            font-weight: 700; 
+            font-size: 1.125rem; 
+            margin-bottom: 1rem; 
+            color: #111827;
+        }
+        .input-field {
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            padding: 0.5rem 0.75rem;
+            width: 100%;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.15s ease-in-out;
+        }
+        .input-field:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 1px #3b82f6;
+        }
+        .btn-blue { 
+            background-color: #0d6efd; 
+            color: white; 
+            padding: 0.375rem 1.25rem; 
+            border-radius: 0.25rem; 
+            font-weight: 500; 
+            font-size: 0.875rem; 
+            border: none; 
+            cursor: pointer; 
+        }
+        .btn-blue:hover { background-color: #0b5ed7; }
+        
+        .btn-gray { 
+            background-color: #6c757d; 
+            color: white; 
+            padding: 0.375rem 1.25rem; 
+            border-radius: 0.25rem; 
+            font-weight: 500; 
+            font-size: 0.875rem; 
+            border: none; 
+            cursor: pointer; 
+        }
+        .btn-gray:hover { background-color: #5c636a; }
+        
+        .muted-box { 
+            background-color: #f9fafb; 
+            border: 1px solid #e5e7eb; 
+            border-radius: 0.25rem; 
+            padding: 0.75rem 1rem; 
+            font-size: 0.875rem; 
+            color: #374151; 
+            white-space: pre-wrap; 
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; 
+            min-height: 60px;
+        }
+        .label { 
+            font-size: 0.875rem; 
+            font-weight: 500; 
+            color: #374151; 
+            margin-bottom: 0.375rem; 
+            display: inline-block; 
+        }
     </style>
 </head>
-<body class="min-h-screen p-6">
-    <div class="max-w-4xl mx-auto">
-        <header class="mb-8 text-center">
-            <h1 class="text-4xl font-bold text-blue-400 mb-2">Medical Prescription Validator</h1>
-            <p class="text-slate-400">Interactive OpenEnv Testing Interface</p>
-        </header>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- State Panel -->
-            <div class="glass rounded-xl p-6 shadow-xl">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-semibold text-white">Current Prescription</h2>
-                    <button id="btn-reset" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm font-semibold transition-colors">Start New Patient (Reset)</button>
-                </div>
-                <div id="patient-data" class="bg-slate-900 rounded p-4 font-mono text-sm text-green-400 min-h-[200px] overflow-y-auto whitespace-pre-wrap">
-                    Click "Start New Patient" to begin...
-                </div>
-                <div class="mt-4 flex justify-between text-sm text-slate-400">
-                    <span id="status-done">Status: Not Started</span>
-                    <span id="status-reward">Total Reward: 0.0</span>
-                </div>
-            </div>
-
-            <!-- Action Panel -->
-            <div class="glass rounded-xl p-6 shadow-xl flex flex-col">
-                <h2 class="text-xl font-semibold text-white mb-4">Pharmacist Action</h2>
-                <div class="flex-grow space-y-4">
-                    <div>
-                        <label class="block text-sm text-slate-400 mb-1">Action Type</label>
-                        <select id="input-action" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white outline-none focus:border-blue-500 transition-colors">
-                            <option value="approve">Approve (No issues)</option>
-                            <option value="flag_interaction">Flag Interaction</option>
-                            <option value="flag_dosage">Flag Dosage</option>
-                            <option value="flag_contraindication">Flag Contraindication</option>
-                            <option value="flag_allergy">Flag Allergy</option>
-                            <option value="reject">Reject Prescription</option>
-                            <option value="request_clarification">Request Clarification</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-sm text-slate-400 mb-1">Drug Name</label>
-                        <input id="input-drug" type="text" placeholder="e.g. Warfarin" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white outline-none focus:border-blue-500 transition-colors">
-                    </div>
-                    <div>
-                        <label class="block text-sm text-slate-400 mb-1">Recommendation</label>
-                        <input id="input-recommendation" type="text" placeholder="e.g. Decrease dosage to 50mg" class="w-full bg-slate-800 border border-slate-700 rounded p-2 text-white outline-none focus:border-blue-500 transition-colors">
-                    </div>
-                </div>
-                <button id="btn-submit" class="mt-6 w-full py-3 bg-emerald-600 hover:bg-emerald-500 rounded font-bold transition-colors">Submit Action</button>
-            </div>
-        </div>
+<body class="p-4 md:p-8">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
         
-        <!-- Feedback -->
-        <div id="feedback-panel" class="mt-6 glass rounded-xl p-6 shadow-xl hidden">
-            <h2 class="text-xl font-semibold text-white mb-2">Feedback</h2>
-            <div id="feedback-text" class="text-lg font-semibold"></div>
+        <!-- Left Column -->
+        <div>
+            <div class="flex items-center mb-4">
+                <div class="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></div>
+                <h1 class="font-bold text-sm text-gray-900">Pharmacist Action Interface</h1>
+            </div>
+
+            <!-- Take Action -->
+            <div class="block-container shadow-sm">
+                <h2 class="header-title">Take Action</h2>
+                <div class="mb-4">
+                    <label class="label">Action Json <span class="text-red-500">*</span>:</label>
+                    <input type="text" id="input-json" class="input-field" placeholder="Enter action json..." value='{"action": {"action_type": "approve", "drug_name": "", "recommendation": ""}}'>
+                    <div class="text-[0.75rem] text-gray-500 mt-2 font-mono leading-relaxed">
+                        JSON action: {"action": {"action_type": "", "drug_name": "", "recommendation": ""}}.<br>
+                        Actions: approve, flag_interaction, flag_dosage, flag_contraindication, flag_allergy, reject, request_clarification
+                    </div>
+                </div>
+                <button id="btn-step" class="btn-blue">Step</button>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex space-x-2 mb-6">
+                <button id="btn-reset" class="btn-gray">Reset Environment</button>
+                <button id="btn-state" class="btn-gray">Get State</button>
+            </div>
+
+            <!-- Current State -->
+            <div class="block-container shadow-sm">
+                <h2 class="header-title">Current State</h2>
+                <div class="text-[0.875rem] text-gray-700 space-y-1.5 font-sans font-medium">
+                    <div>Status: <span id="val-status" class="font-normal font-mono">Reset</span></div>
+                    <div>Episode ID: <span id="val-episode" class="font-normal font-mono">-</span></div>
+                    <div>Step Count: <span id="val-step" class="font-normal font-mono">0</span></div>
+                    <div>Reward: <span id="val-reward" class="font-normal font-mono">-</span></div>
+                </div>
+            </div>
         </div>
 
-        <!-- Logs -->
-        <div class="mt-6 glass rounded-xl p-6 shadow-xl">
-            <h2 class="text-xl font-semibold text-white mb-2">Event Log</h2>
-            <div id="log-output" class="bg-slate-900 rounded p-4 font-mono text-xs text-slate-300 h-40 overflow-y-auto whitespace-pre-wrap"></div>
+        <!-- Right Column (Border separated slightly conceptually but using blocks) -->
+        <div class="md:pl-4 md:border-l border-gray-100">
+            <div class="flex items-center mb-4">
+                <h1 class="font-bold text-sm text-gray-900">Clinical Validation Observer</h1>
+            </div>
+
+            <!-- Current Observation -->
+            <div class="block-container shadow-sm">
+                <h2 class="header-title">Current Observation</h2>
+                <div id="box-obs" class="muted-box text-sm">No observation yet</div>
+            </div>
+
+            <!-- Action History -->
+            <div class="block-container shadow-sm">
+                <h2 class="header-title">Action History</h2>
+                <div id="box-history" class="muted-box text-sm">No actions taken yet</div>
+            </div>
         </div>
+
     </div>
 
     <script>
         const $ = id => document.getElementById(id);
-        const log = msg => { $('log-output').innerHTML = `> ${msg}\n` + $('log-output').innerHTML; };
-        let currentReward = 0.0;
+        let stepCount = 0;
+        let actionHistory = [];
+        let episodeId = Date.now().toString(36);
         
-        function displayObservation(rawData) {
-            // The API returns {observation: {...}, reward, done} — unwrap it
-            if (!rawData) {
-                $('patient-data').textContent = 'No data received. Click "Start New Patient" to begin.';
-                return;
+        function formatVal(val) {
+            if (val === undefined || val === null) return '-';
+            return val;
+        }
+
+        async function updateDisplay(data, actionPayload = null) {
+            const obs = data.observation || data;
+            const reward = data.reward != null ? data.reward : null;
+            const done = data.done === true;
+            
+            $('val-status').textContent = done ? 'Done' : 'Active';
+            $('val-step').textContent = stepCount.toString();
+            $('val-episode').textContent = episodeId;
+            if (reward !== null) {
+                // Keep keeping track of total reward internally if needed, or just display step reward.
+                $('val-reward').textContent = reward.toFixed(2);
             }
             
-            // Unwrap: the observation is inside rawData.observation or rawData itself
-            const obs = rawData.observation || rawData;
-            const reward = rawData.reward != null ? rawData.reward : (obs.reward != null ? obs.reward : null);
-            const done = rawData.done != null ? rawData.done : (obs.done === true);
+            // Format observation JSON nicely
+            $('box-obs').textContent = JSON.stringify(obs, null, 2);
             
-            const displayData = {};
-            
-            if (obs.patient_info) {
-                displayData.patient = obs.patient_info;
+            if (actionPayload) {
+                actionHistory.push({
+                    step: stepCount,
+                    action: actionPayload,
+                    reward: formatVal(reward),
+                    done: done
+                });
+                
+                $('box-history').textContent = actionHistory.map(h => 
+                    `[Step ${h.step}] Action: ${JSON.stringify(h.action)}\n-> Reward: ${h.reward} | Done: ${h.done}`
+                ).join('\n\n');
+            } else if (actionHistory.length === 0) {
+                $('box-history').textContent = "No actions taken yet";
             }
-            if (obs.prescription) {
-                displayData.prescription = obs.prescription;
-            }
-            
-            if (Object.keys(displayData).length > 0) {
-                $('patient-data').textContent = JSON.stringify(displayData, null, 2);
-            } else {
-                $('patient-data').textContent = JSON.stringify(obs, null, 2);
-            }
-            
-            // Update status
-            const isDone = done === true;
-            $('status-done').textContent = `Status: ${isDone ? 'Finished (Done)' : 'Active'}`;
-            if (isDone) {
-                $('status-done').classList.add('text-red-400');
-            } else {
-                $('status-done').classList.remove('text-red-400');
-            }
-            
-            // Show feedback if present
-            const feedback = obs.feedback || '';
-            if (feedback) {
-                $('feedback-panel').classList.remove('hidden');
-                $('feedback-text').textContent = feedback;
-                if (feedback.includes('✅')) {
-                    $('feedback-text').className = 'text-lg font-semibold text-green-400';
-                } else if (feedback.includes('❌')) {
-                    $('feedback-text').className = 'text-lg font-semibold text-red-400';
-                } else if (feedback.includes('🎯')) {
-                    $('feedback-text').className = 'text-lg font-semibold text-yellow-400';
-                } else {
-                    $('feedback-text').className = 'text-lg font-semibold text-blue-400';
-                }
-            }
-            return { obs, reward, done };
         }
 
         $('btn-reset').onclick = async () => {
-            $('btn-reset').classList.add('loading');
-            $('feedback-panel').classList.add('hidden');
-            log('Resetting environment...');
+            $('box-obs').textContent = "Loading...";
             try {
                 const res = await fetch('/reset', {
                     method: 'POST',
@@ -148,31 +195,28 @@
                     body: JSON.stringify({ task_name: 'easy' })
                 });
                 const data = await res.json();
-                currentReward = 0.0;
-                $('status-reward').textContent = `Total Reward: ${currentReward.toFixed(2)}`;
                 
-                // The /reset endpoint returns the observation directly
-                const result = displayObservation(data);
-                log('Environment reset successfully! Review the prescription and take an action.');
+                stepCount = 0;
+                actionHistory = [];
+                episodeId = Date.now().toString(36);
+                $('val-status').textContent = 'Reset';
+                $('val-reward').textContent = '-';
+                
+                updateDisplay(data);
             } catch (e) {
-                log('Reset Failed: ' + e.message);
+                $('box-obs').textContent = 'Error resetting environment:\n' + e.message;
             }
-            $('btn-reset').classList.remove('loading');
         };
 
-        $('btn-submit').onclick = async () => {
-            $('btn-submit').classList.add('loading');
-            const innerAction = {
-                action_type: $('input-action').value,
-                recommendation: $('input-recommendation').value || 'No recommendation'
-            };
-            // Only include drug_name if it has a value
-            if ($('input-drug').value) {
-                innerAction.drug_name = $('input-drug').value;
+        $('btn-step').onclick = async () => {
+            let actionPayload;
+            try {
+                actionPayload = JSON.parse($('input-json').value);
+            } catch (e) {
+                alert("Invalid JSON action formatting. Please ensure it's valid JSON.");
+                return;
             }
-            const actionPayload = { action: innerAction };
             
-            log(`Submitting action: ${innerAction.action_type}...`);
             try {
                 const res = await fetch('/step', {
                     method: 'POST',
@@ -182,26 +226,29 @@
                 const data = await res.json();
                 
                 if (!res.ok) {
-                    throw new Error(JSON.stringify(data.detail || "Unknown API Error"));
+                    throw new Error(JSON.stringify(data));
                 }
                 
-                const result = displayObservation(data);
-                let stepReward = result.reward || 0.0;
-                currentReward += stepReward;
-                $('status-reward').textContent = `Total Reward: ${currentReward.toFixed(2)}`;
-                log(`Action graded! Reward: ${stepReward.toFixed(2)} | Total: ${currentReward.toFixed(2)}`);
-                
-                if (result.done) {
-                    log('=== EPISODE COMPLETE === Final reward: ' + currentReward.toFixed(2));
-                }
+                stepCount++;
+                updateDisplay(data, actionPayload);
             } catch (e) {
-                log('Action Failed: ' + e.message);
+                alert('Action step failed: ' + e.message);
             }
-            $('btn-submit').classList.remove('loading');
         };
 
-        // Show initial message
-        log('Welcome! Click "Start New Patient (Reset)" to begin.');
+        $('btn-state').onclick = async () => {
+            try {
+                const res = await fetch('/state', { method: 'GET' });
+                if (res.ok) {
+                    const data = await res.json();
+                    alert("State Object:\n\n" + JSON.stringify(data, null, 2));
+                } else {
+                    alert("State endpoint returned an error.");
+                }
+            } catch (e) {
+                alert("Error fetching state: " + e.message);
+            }
+        };
     </script>
 </body>
 </html>
