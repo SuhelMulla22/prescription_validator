@@ -17,8 +17,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Environment variables (strictly required by hackathon proxy spec)
 API_BASE_URL = os.getenv("API_BASE_URL")
-API_KEY = os.getenv("API_KEY")
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
+API_KEY = os.getenv("OPENAI_API_KEY") or os.getenv("API_KEY") or os.getenv("HF_TOKEN")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
 IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME") or os.getenv(
     "IMAGE_NAME", "suhellll/prescription-validator"
 )
