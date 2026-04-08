@@ -31,21 +31,25 @@ these real-world clinical safety tasks.
 
 | Task   | Difficulty | Description                      | Medications | Issues | Expected Steps |
 | ------ | ---------- | -------------------------------- | ----------- | ------ | -------------- |
-| easy   | Low        | Single drug, 0–1 simple issues   | 1           | 0–1    | 3–5            |
+| easy   | Low        | Single drug, 0–1 simple issues   | 1–2         | 0–1    | 3–5            |
 | medium | Medium     | Multi-drug with interactions     | 2–3         | 1–2    | 5–10           |
-| hard   | High       | Complex patient, multiple issues | 4+          | 2–4    | 10–20          |
+| hard   | High       | Complex patient, multiple issues | 4–5         | 2–4    | 10–20          |
 
 ### Examples
 
 **Easy** — A 55-year-old patient with Hypertension prescribed Lisinopril 10mg once daily.
 Expected action: `approve`.
 
-**Medium** — A 68-year-old patient on Warfarin 5mg and Aspirin 81mg together.
-Expected action: `flag_interaction` (critical bleeding risk).
+**Easy** — A 45-year-old patient with Penicillin allergy prescribed Amoxicillin 500mg.
+Expected action: `flag_allergy` (critical anaphylaxis risk).
 
-**Hard** — A 72-year-old with impaired kidneys prescribed Warfarin 15mg (overdose),
-Ibuprofen 600mg (interacts with Warfarin), and Metformin 1000mg (needs kidney adjustment).
-Expected actions: `flag_dosage`, `flag_interaction`, `flag_contraindication`.
+**Medium** — A 68-year-old patient on Warfarin 5mg and Aspirin 325mg with Omeprazole.
+Expected actions: `flag_interaction` (critical bleeding risk), `flag_interaction` (CYP2C19).
+
+**Hard** — An 80-year-old with severe kidney disease prescribed Warfarin 15mg (overdose),
+Ibuprofen 600mg (interacts with Warfarin + contraindicated in kidney disease),
+Metformin 1000mg (contraindicated in kidney disease), and Amoxicillin (penicillin allergy).
+Expected actions: `flag_dosage`, `flag_interaction`, `flag_contraindication`, `flag_allergy`.
 
 ## Action Space
 
@@ -91,9 +95,11 @@ class PrescriptionObservation(Observation):
 | Flag warning        | Correctly found   | +0.5   | Caught potential issue      |
 | Approve             | Prescription safe | +1.0   | Correct clinical judgment   |
 | Approve             | Has issues        | -1.0   | Patient at risk             |
+| Reject              | Has issues        | +0.3–1.0 | Scaled by issues found    |
 | Flag issue          | False positive    | -0.2   | Unnecessary delay in care   |
 | Reject              | Prescription safe | -0.5   | Unnecessary rejection       |
 | Good recommendation | Detailed plan     | +0.1   | Better patient care (bonus) |
+| Correct severity    | Matches ground truth | +0.1 | Accurate risk assessment   |
 
 Success threshold: score >= 0.7 (70% safety rating).
 
@@ -138,24 +144,25 @@ curl http://localhost:7860/health   # {"status":"healthy"}
 | `PORT`                         | `7860`    | Server port     |
 | `HOST`                         | `0.0.0.0` | Bind address    |
 | `WORKERS`                      | `4`       | Uvicorn workers |
-| `OPENENV_ENABLE_WEB_INTERFACE` | `false`   | Enable web UI   |
+| `OPENENV_ENABLE_WEB_INTERFACE` | `true`    | Enable web UI   |
 
 ## Running Inference
 
 ```bash
-export HF_TOKEN="your_hugging_face_token"
+export API_BASE_URL="https://api.openai.com/v1"
+export API_KEY="your_api_key"
+export MODEL_NAME="gpt-4o-mini"
 export IMAGE_NAME="suhellll/prescription-validator"
-export TASK_NAME="medium"
 python inference.py
 ```
 
 Expected output:
 
 ```
-[START] task=medium env=prescription_validator model=Qwen/Qwen2.5-72B-Instruct
-[STEP] step=1 action={"action_type":"flag_interaction","drug_name":"Warfarin"} reward=1.00 done=false error=null
-[STEP] step=2 action={"action_type":"reject","recommendation":"Unsafe"} reward=0.50 done=true error=null
-[END] success=true steps=2 rewards=1.00,0.50
+[START] task=easy env=prescription_validator model=gpt-4o-mini
+[STEP] step=1 action={"action_type":"flag_interaction","drug_name":"Warfarin",...} reward=1.00 done=false error=null
+[STEP] step=2 action={"action_type":"reject","recommendation":"Unsafe"} reward=0.85 done=true error=null
+[END] success=true steps=2 rewards=1.00,0.85 score=0.92
 ```
 
 ## Baseline Performance
@@ -164,26 +171,28 @@ Expected output:
 | -------------------- | ---- | ------ | ---- | --------- |
 | Random               | 0.15 | 0.08   | 0.03 | 0.09      |
 | Rule-based Heuristic | 0.78 | 0.58   | 0.41 | 0.59      |
-| GPT-4                | 0.94 | 0.82   | 0.68 | 0.81      |
-| Qwen-2.5-72B         | 0.92 | 0.79   | 0.65 | 0.79      |
+| GPT-4o-mini          | 0.88 | 0.75   | 0.60 | 0.74      |
+| GPT-4o               | 0.94 | 0.82   | 0.68 | 0.81      |
 | Claude-3.5-Sonnet    | 0.96 | 0.88   | 0.74 | 0.86      |
 
 ## Drug Database
 
-14 common medications across 6 categories:
+20 common medications across 8 categories:
 
-| Category       | Drugs                                     |
-| -------------- | ----------------------------------------- |
-| Cardiovascular | Warfarin, Aspirin, Lisinopril, Metoprolol |
-| Diabetes       | Metformin, Insulin                        |
-| Antibiotics    | Amoxicillin, Ciprofloxacin                |
-| Pain           | Ibuprofen, Morphine                       |
-| Psychiatric    | Sertraline, Lorazepam                     |
-| Other          | Omeprazole, Atorvastatin, Levothyroxine   |
+| Category       | Drugs                                                |
+| -------------- | ---------------------------------------------------- |
+| Cardiovascular | Warfarin, Aspirin, Lisinopril, Metoprolol, Amlodipine |
+| Diabetes       | Metformin, Insulin, Glipizide                        |
+| Antibiotics    | Amoxicillin, Ciprofloxacin                           |
+| Pain           | Ibuprofen, Morphine, Acetaminophen                   |
+| Psychiatric    | Sertraline, Lorazepam, Lithium                       |
+| GI             | Omeprazole                                           |
+| Cardiovascular | Atorvastatin, Digoxin                                |
+| Endocrine      | Levothyroxine, Prednisone                            |
 
 Each drug includes safe dose ranges, known interactions, contraindications, and
 organ function requirements. Data is simplified from FDA drug interaction guidelines
-for educational use.
+for educational use. 12 critical interaction pairs programmed.
 
 ## Project Structure
 
@@ -194,9 +203,9 @@ prescription-validator/
 ├── server/
 │   ├── environment.py     # Core environment logic
 │   ├── app.py             # FastAPI server
-│   ├── drug_database.py   # Medical knowledge base
+│   ├── drug_database.py   # Medical knowledge base + case generators
 │   └── __init__.py
-├── inference.py           # Evaluation script
+├── inference.py           # Evaluation script (uses OpenAI client)
 ├── Dockerfile             # Container definition
 ├── requirements.txt       # Python dependencies
 ├── openenv.yaml           # Environment metadata

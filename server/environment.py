@@ -4,14 +4,12 @@ Validates prescriptions against a drug database and grades agent actions
 using deterministic clinical rules.
 """
 
-import json
 import os
 import random
 import sys
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
-from openai import OpenAI
 from openenv.core.env_server import Environment
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -44,12 +42,6 @@ class PrescriptionValidationEnvironment(Environment):
         self._issues_correctly_found = set()
         self._false_positives = []
         self._episode_complete = False
-
-        # Initialize environment's internal LLM for intelligent feedback
-        self._llm_client = None
-        api_key = os.environ.get("OPENAI_API_KEY")
-        if api_key:
-            self._llm_client = OpenAI(api_key=api_key)
 
     # ------------------------------------------------------------------
     # OpenEnv interface
@@ -92,6 +84,17 @@ class PrescriptionValidationEnvironment(Environment):
             safety_score=0.0,
         )
 
+        # Build a richer initial feedback message so the LLM has context
+        n_meds = len(self._current_prescription.get("medications", []))
+        med_names = [m.get("drug", "?") for m in self._current_prescription.get("medications", [])]
+        feedback_msg = (
+            f"New {task_id} prescription review. "
+            f"Patient has {len(self._current_patient.get('conditions', []))} condition(s), "
+            f"{len(self._current_patient.get('allergies', []))} known allergy(ies). "
+            f"Prescribed {n_meds} medication(s): {', '.join(med_names)}. "
+            f"Please check each medication for safety issues and respond with a JSON action."
+        )
+
         return PrescriptionObservation(
             done=False,
             reward=None,
@@ -99,7 +102,7 @@ class PrescriptionValidationEnvironment(Environment):
             patient_info=self._current_patient,
             validation_results=[],
             current_issues=[],
-            feedback=f"New {task_id} task: Please review this prescription for safety.",
+            feedback=feedback_msg,
             task_id=task_id,
             step_count=0,
             available_actions=[
@@ -112,12 +115,12 @@ class PrescriptionValidationEnvironment(Environment):
             ],
         )
 
-    async def step(
+    def step(
         self, action: PrescriptionAction, timeout_s: Optional[float] = None, **kwargs
     ) -> PrescriptionObservation:
         self._state.step_count += 1
 
-        reward, feedback, done = await self._process_action(action)
+        reward, feedback, done = self._process_action(action)
 
         if done:
             self._episode_complete = True
@@ -163,15 +166,7 @@ class PrescriptionValidationEnvironment(Environment):
                 )
 
         elif task_id == "medium":
-            case_type = random.choice(["interaction", "dosage", "contraindication"])
-            if case_type == "interaction":
-                prescription, patient, issues = self._prescription_gen.generate_interaction_case()
-            elif case_type == "dosage":
-                prescription, patient, issues = self._prescription_gen.generate_dosage_error()
-            else:
-                prescription, patient, issues = (
-                    self._prescription_gen.generate_contraindication_case()
-                )
+            prescription, patient, issues = self._prescription_gen.generate_medium_case()
 
         else:  # hard
             prescription, patient, issues = self._prescription_gen.generate_complex_case()
@@ -184,7 +179,7 @@ class PrescriptionValidationEnvironment(Environment):
     # Action processing and reward calculation
     # ------------------------------------------------------------------
 
-    async def _process_action(self, action: PrescriptionAction) -> Tuple[float, str, bool]:
+    def _process_action(self, action: PrescriptionAction) -> Tuple[float, str, bool]:
         reward = 0.0
         feedback = ""
         done = False
@@ -198,14 +193,18 @@ class PrescriptionValidationEnvironment(Environment):
                 missed_critical = sum(
                     1
                     for issue in self._ground_truth_issues
-                    if issue.get("severity") == "critical" and issue not in self._identified_issues
+                    if issue.get("severity") == "critical"
+                    and str(issue) not in self._issues_correctly_found
                 )
-                reward = -1.0 * missed_critical
+                # Reward for partial work before approving
+                partial = len(self._issues_correctly_found) * 0.1
+                reward = partial - (1.0 * missed_critical)
                 self._state.false_negatives = len(self._ground_truth_issues) - len(
                     self._issues_correctly_found
                 )
                 feedback = (
-                    f"UNSAFE! You approved a prescription with {len(self._ground_truth_issues)} issue(s). "
+                    f"UNSAFE! You approved a prescription with "
+                    f"{len(self._ground_truth_issues)} issue(s). "
                     f"Missed critical issues: {missed_critical}. "
                     "Issues: "
                     + "; ".join(
@@ -217,15 +216,22 @@ class PrescriptionValidationEnvironment(Environment):
         elif action.action_type == "reject":
             done = True
             if len(self._ground_truth_issues) > 0:
-                reward = 0.5 + (
-                    0.5
-                    * (len(self._issues_correctly_found) / max(1, len(self._ground_truth_issues)))
+                found_ratio = len(self._issues_correctly_found) / max(
+                    1, len(self._ground_truth_issues)
                 )
-                feedback = f"Correct rejection. Found {len(self._issues_correctly_found)}/{len(self._ground_truth_issues)} issues."
+                # Better reward for finding more issues before rejecting
+                reward = 0.3 + (0.7 * found_ratio)
+                feedback = (
+                    f"Correct rejection. Found {len(self._issues_correctly_found)}/"
+                    f"{len(self._ground_truth_issues)} issues before rejecting."
+                )
             else:
                 reward = -0.5
                 self._state.false_positives += 1
-                feedback = "This prescription was actually safe. Unnecessary rejection delays patient care."
+                feedback = (
+                    "This prescription was actually safe. "
+                    "Unnecessary rejection delays patient care."
+                )
 
         elif action.action_type == "flag_interaction":
             reward, feedback = self._check_flagged_issue(action, expected_type="drug_interaction")
@@ -242,9 +248,10 @@ class PrescriptionValidationEnvironment(Environment):
             reward, feedback = self._check_flagged_issue(action, expected_type="allergy_risk")
 
         elif action.action_type == "request_clarification":
-            reward = 0.0
+            reward = -0.05  # Small penalty to discourage stalling
             feedback = (
-                "Clarification requested. In a real system, this would contact the prescriber."
+                "Clarification noted. All necessary clinical data is available. "
+                "Please analyze the prescription with the given information."
             )
 
         if self._state.step_count >= self.MAX_STEPS:
@@ -253,44 +260,7 @@ class PrescriptionValidationEnvironment(Environment):
                 reward -= 0.3
                 feedback += " [Episode ended: maximum steps reached]"
 
-        # Enhance deterministic feedback with LLM reasoning if available
-        if self._llm_client:
-            feedback = await self._get_llm_clinical_feedback(action, feedback)
-
         return reward, feedback, done
-
-    async def _get_llm_clinical_feedback(
-        self, action: PrescriptionAction, deterministic_feedback: str
-    ) -> str:
-        """Uses environment's internal LLM to generate intelligent clinical reasoning."""
-        try:
-            prompt = f"""You are a clinical pharmacist. A pharmacist agent to provide a safety review:
-
-PATIENT: {json.dumps(self._current_patient)}
-PRESCRIPTION: {json.dumps(self._current_prescription)}
-
-ACTION TAKEN: {action.action_type} on {action.drug_name or 'everything'}
-RECOMMENDATION: {action.recommendation}
-
-SYSTEM FEEDBACK: {deterministic_feedback}
-
-Task: Write a very professional, 1-sentence pharmacological reason why this action is correct or incorrect based on the clinical data. Use medical terminology."""
-
-            # Use sync call in thread or async if available. OpenAI client 1.0+ supports sync.
-            response = self._llm_client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a clinical advisor."},
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=0.1,
-                max_tokens=60,
-            )
-            reasoning = response.choices[0].message.content.strip()
-            return f"{reasoning} ({deterministic_feedback})"
-        except Exception as e:
-            print(f"[DEBUG] Env feedback LLM error: {e}")
-            return deterministic_feedback
 
     def _check_flagged_issue(
         self, action: PrescriptionAction, expected_type: Any
@@ -336,12 +306,30 @@ Task: Write a very professional, 1-sentence pharmacological reason why this acti
                     reward = 0.5
                     feedback = f"Issue identified: {matching_issue['description']}"
 
+                # Bonus for detailed recommendation
                 if action.recommendation and len(action.recommendation) > 10:
                     reward += 0.1
                     feedback += " [+0.1 for detailed recommendation]"
+
+                # Bonus for correct severity assessment
+                if action.severity and action.severity == matching_issue.get("severity"):
+                    reward += 0.1
+                    feedback += " [+0.1 for correct severity]"
+
+                # Show how many issues remain
+                remaining = len(self._ground_truth_issues) - len(self._issues_correctly_found)
+                if remaining > 0:
+                    feedback += (
+                        f" ({remaining} more issue(s) to find. "
+                        f"Continue checking or reject when done.)"
+                    )
+                else:
+                    feedback += (
+                        " All issues found! You may now reject the prescription."
+                    )
             else:
                 reward = 0.0
-                feedback = "This issue was already identified."
+                feedback = "This issue was already identified. Check for other issues."
         else:
             self._state.false_positives += 1
             self._false_positives.append(
@@ -352,7 +340,11 @@ Task: Write a very professional, 1-sentence pharmacological reason why this acti
                 }
             )
             reward = -0.2
-            feedback = f"False positive: No {expected_types[0]} issue with {action.drug_name or 'these drugs'}."
+            feedback = (
+                f"False positive: No {expected_types[0]} issue found for "
+                f"{action.drug_name or 'these drugs'}. "
+                f"Check the prescription data carefully."
+            )
 
         return reward, feedback
 

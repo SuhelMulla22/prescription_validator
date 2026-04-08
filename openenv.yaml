@@ -4,6 +4,8 @@ description: >
   Medical prescription validation environment for training AI to prevent
   medication errors. Simulates a clinical pharmacist reviewing prescriptions
   for drug interactions, dosage errors, contraindications, and allergy risks.
+  Features 20 drugs, 12 critical interaction pairs, and randomized case
+  generation for non-trivial evaluation.
 
 author: "Suhel Mulla"
 email: "suhelmulla22@gmail.com"
@@ -26,21 +28,21 @@ tasks:
     description: "Single medication with 0-1 obvious issues (dosage, allergy, or safe)"
     difficulty: easy
     expected_steps: 3-5
-    max_reward: 1.0
+    max_reward: 1.5
 
   - id: medium
     name: "Multi-Drug Review"
-    description: "2-3 medications with potential interactions or contraindications"
+    description: "2-3 medications with potential interactions, dosage issues, or contraindications"
     difficulty: medium
     expected_steps: 5-10
-    max_reward: 2.0
+    max_reward: 3.0
 
   - id: hard
     name: "Complex Case Management"
-    description: "4+ medications, multiple patient conditions, compound issues"
+    description: "4+ medications, multiple patient conditions, compound interacting issues"
     difficulty: hard
     expected_steps: 10-20
-    max_reward: 3.0
+    max_reward: 5.0
 
 grading:
   score_range: [0.0, 1.0]
@@ -50,11 +52,13 @@ grading:
   explanation: |
     Correctly identifying critical issues: +1.0
     Correctly identifying warnings: +0.5
-    Missing critical issues: -1.0
+    Missing critical issues (approve despite issues): -1.0
     False positives: -0.2
     Correct approval of safe prescription: +1.0
     Incorrect rejection of safe prescription: -0.5
     Detailed recommendation bonus: +0.1
+    Correct severity assessment bonus: +0.1
+    Reject with issues found: +0.3 to +1.0 (scaled by coverage)
 
 capabilities:
   concurrent_sessions: true
@@ -73,15 +77,17 @@ domain:
     - "Medication safety monitoring"
 
 drug_database:
-  total_drugs: 14
+  total_drugs: 20
   categories:
-    - "Cardiovascular (Warfarin, Aspirin, Lisinopril, Metoprolol)"
-    - "Diabetes (Metformin, Insulin)"
+    - "Cardiovascular (Warfarin, Aspirin, Lisinopril, Metoprolol, Amlodipine)"
+    - "Diabetes (Metformin, Insulin, Glipizide)"
     - "Antibiotics (Amoxicillin, Ciprofloxacin)"
-    - "Pain (Ibuprofen, Morphine)"
-    - "Psychiatric (Sertraline, Lorazepam)"
-    - "Other (Omeprazole, Atorvastatin, Levothyroxine)"
-  interaction_pairs: 8
+    - "Pain (Ibuprofen, Morphine, Acetaminophen)"
+    - "Psychiatric (Sertraline, Lorazepam, Lithium)"
+    - "GI (Omeprazole)"
+    - "Cardiac (Atorvastatin, Digoxin)"
+    - "Endocrine (Levothyroxine, Prednisone)"
+  interaction_pairs: 12
   severity_levels: ["critical", "warning", "info"]
 
 data_sources:
