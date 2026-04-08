@@ -285,11 +285,7 @@ def get_llm_action(
 
     except Exception as e:
         print(f"[DEBUG] LLM request failed: {e}", flush=True)
-        time.sleep(2)
-        return {
-            "action_type": "request_clarification",
-            "recommendation": f"Error getting LLM response: {e}",
-        }
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -307,6 +303,18 @@ async def main():
         )
 
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+
+    print("[DEBUG] === TESTING LLM CLIENT ===", flush=True)
+    try:
+        test_msg = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": "test"}],
+            max_tokens=5
+        )
+        print(f"[DEBUG] ✅ LLM TEST PASSED: {test_msg.choices[0].message.content}", flush=True)
+    except Exception as e:
+        print(f"[DEBUG] ❌ LLM TEST FAILED: {e}", flush=True)
+        raise
 
     history: List[str] = []
     rewards: List[float] = []
@@ -375,6 +383,7 @@ async def main():
         import traceback
 
         traceback.print_exc()
+        raise
 
     log_end(success=success, steps=steps_taken, rewards=rewards)
 
