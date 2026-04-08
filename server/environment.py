@@ -4,12 +4,14 @@ Validates prescriptions against a drug database and grades agent actions
 using deterministic clinical rules.
 """
 
+import json
 import os
 import random
 import sys
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
+from openai import OpenAI
 from openenv.core.env_server import Environment
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -42,6 +44,12 @@ class PrescriptionValidationEnvironment(Environment):
         self._issues_correctly_found = set()
         self._false_positives = []
         self._episode_complete = False
+
+        # Initialize environment's internal LLM for intelligent feedback
+        self._llm_client = None
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if api_key:
+            self._llm_client = OpenAI(api_key=api_key)
 
     # ------------------------------------------------------------------
     # OpenEnv interface
@@ -104,12 +112,12 @@ class PrescriptionValidationEnvironment(Environment):
             ],
         )
 
-    def step(
+    async def step(
         self, action: PrescriptionAction, timeout_s: Optional[float] = None, **kwargs
     ) -> PrescriptionObservation:
         self._state.step_count += 1
 
-        reward, feedback, done = self._process_action(action)
+        reward, feedback, done = await self._process_action(action)
 
         if done:
             self._episode_complete = True
@@ -176,7 +184,7 @@ class PrescriptionValidationEnvironment(Environment):
     # Action processing and reward calculation
     # ------------------------------------------------------------------
 
-    def _process_action(self, action: PrescriptionAction) -> Tuple[float, str, bool]:
+    async def _process_action(self, action: PrescriptionAction) -> Tuple[float, str, bool]:
         reward = 0.0
         feedback = ""
         done = False
@@ -245,7 +253,44 @@ class PrescriptionValidationEnvironment(Environment):
                 reward -= 0.3
                 feedback += " [Episode ended: maximum steps reached]"
 
+        # Enhance deterministic feedback with LLM reasoning if available
+        if self._llm_client:
+            feedback = await self._get_llm_clinical_feedback(action, feedback)
+
         return reward, feedback, done
+
+    async def _get_llm_clinical_feedback(
+        self, action: PrescriptionAction, deterministic_feedback: str
+    ) -> str:
+        """Uses environment's internal LLM to generate intelligent clinical reasoning."""
+        try:
+            prompt = f"""You are a clinical pharmacist. A pharmacist agent to provide a safety review:
+
+PATIENT: {json.dumps(self._current_patient)}
+PRESCRIPTION: {json.dumps(self._current_prescription)}
+
+ACTION TAKEN: {action.action_type} on {action.drug_name or 'everything'}
+RECOMMENDATION: {action.recommendation}
+
+SYSTEM FEEDBACK: {deterministic_feedback}
+
+Task: Write a very professional, 1-sentence pharmacological reason why this action is correct or incorrect based on the clinical data. Use medical terminology."""
+
+            # Use sync call in thread or async if available. OpenAI client 1.0+ supports sync.
+            response = self._llm_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a clinical advisor."},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.1,
+                max_tokens=60,
+            )
+            reasoning = response.choices[0].message.content.strip()
+            return f"{reasoning} ({deterministic_feedback})"
+        except Exception as e:
+            print(f"[DEBUG] Env feedback LLM error: {e}")
+            return deterministic_feedback
 
     def _check_flagged_issue(
         self, action: PrescriptionAction, expected_type: Any

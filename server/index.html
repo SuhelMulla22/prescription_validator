@@ -3,390 +3,470 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medical Prescription Validator</title>
+    <title>PHARMA-GUARD | Clinical AI Validator</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #2563eb;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
         body { 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f8fafc; /* Beautiful clean slate background */
-            color: #0f172a;
+            font-family: 'Inter', sans-serif;
+            background-color: #f1f5f9;
+            color: var(--primary);
         }
-        .glass-card {
-            background-color: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 0.75rem;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            overflow: hidden;
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Premium UI Elements */
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
         }
-        .header-title { 
-            font-weight: 600; 
-            font-size: 1.125rem; 
-            color: #1e293b; 
-            margin-bottom: 1.25rem; 
-            display: flex; 
-            align-items: center;
+        .shimmer {
+            background: linear-gradient(90deg, #f1f5f9 0%, #ffffff 50%, #f1f5f9 100%);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
         }
         
-        .input-base {
-            width: 100%;
-            border: 1px solid #cbd5e1;
-            border-radius: 0.5rem;
-            padding: 0.625rem 0.75rem;
-            font-size: 0.875rem;
-            color: #334155;
-            background-color: #f8fafc;
-            transition: all 0.2s ease;
-            outline: none;
-        }
-        .input-base:focus { 
-            border-color: #3b82f6; 
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); 
-            background-color: #ffffff; 
+        .tab-active {
+            color: var(--accent);
+            border-bottom: 3px solid var(--accent);
         }
         
-        .label { 
-            display: block; 
-            font-size: 0.875rem; 
-            font-weight: 500; 
-            color: #475569; 
-            margin-bottom: 0.375rem; 
+        .clinical-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 2px 8px;
+            border-radius: 9999px;
         }
-        
-        .btn-primary { 
-            background-color: #2563eb; 
-            color: white; 
-            border-radius: 0.5rem; 
-            padding: 0.625rem 1.25rem; 
-            font-weight: 600; 
-            font-size: 0.875rem; 
-            width: 100%; 
-            transition: background-color 0.2s; 
-            cursor: pointer; 
-        }
-        .btn-primary:hover:not(:disabled) { background-color: #1d4ed8; }
-        .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; }
-        
-        .btn-secondary { 
-            background-color: #f1f5f9; 
-            color: #475569; 
-            border: 1px solid #cbd5e1; 
-            border-radius: 0.5rem; 
-            padding: 0.5rem 1rem; 
-            font-weight: 500; 
-            font-size: 0.875rem; 
-            transition: all 0.2s; 
-            cursor: pointer; 
-        }
-        .btn-secondary:hover:not(:disabled) { background-color: #e2e8f0; color: #1e293b; }
-        .btn-secondary:disabled { opacity: 0.6; cursor: not-allowed; }
-
-        .json-box {
-            background-color: #f8fafc; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 0.5rem; 
-            padding: 1rem;
-            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-            font-size: 0.8125rem; 
-            color: #334155; 
-            white-space: pre-wrap; 
-            word-wrap: break-word; 
-            word-break: break-all;
-            height: clamp(300px, 50vh, 500px); 
-            overflow-y: auto;
-        }
-
-        /* Custom scrollbar for better look */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
-<body class="min-h-screen p-4 md:p-8">
-    <div class="max-w-7xl mx-auto flex flex-col h-full gap-6">
-        <!-- Main Header -->
-        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-end border-b border-gray-200 pb-4 gap-4">
-            <div>
-                <h1 class="text-2xl font-bold text-slate-800 tracking-tight">Medical Prescription Validator</h1>
-                <p class="text-sm text-slate-500 mt-1 font-medium">Professional Clinical OpenEnv Interface</p>
-            </div>
-            <div class="flex items-center space-x-4 bg-white px-6 py-3 rounded-lg border border-slate-200 shadow-sm">
-                <div class="text-center sm:text-right">
-                    <div class="text-[0.65rem] text-slate-500 font-bold uppercase tracking-wider mb-1">Total Episode Reward</div>
-                    <div class="text-2xl font-bold text-blue-600 leading-none" id="val-reward">0.00</div>
+<body class="min-h-screen">
+    <!-- Navbar -->
+    <nav class="glass sticky top-0 z-50 px-6 py-4 shadow-sm">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 p-2 rounded-lg shadow-lg shadow-blue-200">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-tight text-slate-900 leading-none">PHARMA-GUARD</h1>
+                    <span class="text-[0.6rem] font-bold text-blue-500 uppercase tracking-widest">Hybrid AI Validation Engine</span>
                 </div>
             </div>
-        </header>
-
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            <!-- Left Panel (Actions) -->
-            <div class="lg:col-span-5 space-y-6">
-                <!-- Environment Controls -->
-                <div class="glass-card p-6 bg-slate-50">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Metrics & Controls</h2>
-                        <button id="btn-reset" class="btn-secondary text-xs flex items-center shadow-sm">
-                            <svg class="w-3.5 h-3.5 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                            Start New Patient
-                        </button>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 text-sm font-medium">
-                        <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between">
-                            <span class="text-slate-500 text-xs">Status</span>
-                            <span id="val-status" class="text-amber-600 font-semibold text-xs bg-amber-50 px-2 py-0.5 rounded-full">Waiting</span>
-                        </div>
-                        <div class="bg-white p-3 rounded-lg border border-slate-200 shadow-sm flex items-center justify-between">
-                            <span class="text-slate-500 text-xs">Steps</span>
-                            <span id="val-step" class="text-slate-800 font-bold bg-slate-100 px-2 py-0.5 rounded-full">0</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action Controls -->
-                <div class="glass-card p-6">
-                    <h2 class="header-title border-b border-slate-100 pb-3 mb-4">
-                        <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                        Pharmacist Evaluation
-                    </h2>
-                    
-                    <div class="space-y-4">
-                        <div>
-                            <label class="label">Action Type</label>
-                            <select id="input-action" class="input-base font-medium text-slate-700">
-                                <option value="approve">Approve (No issues)</option>
-                                <option value="flag_interaction">Flag Interaction</option>
-                                <option value="flag_dosage">Flag Dosage</option>
-                                <option value="flag_contraindication">Flag Contraindication</option>
-                                <option value="flag_allergy">Flag Allergy</option>
-                                <option value="reject">Reject Prescription</option>
-                                <option value="request_clarification">Request Clarification</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="label">Target Drug Name <span class="font-normal text-slate-400 text-xs ml-1">(Optional if approving)</span></label>
-                            <input type="text" id="input-drug" class="input-base" placeholder="e.g. Warfarin, Aspirin">
-                        </div>
-                        <div>
-                            <label class="label">Clinical Recommendation <span class="font-normal text-slate-400 text-xs ml-1">(Optional)</span></label>
-                            <input type="text" id="input-recommendation" class="input-base" placeholder="e.g. Decrease dosage to 50mg">
-                        </div>
-                    </div>
-
-                    <button id="btn-submit" class="btn-primary mt-6 group flex justify-center items-center shadow-md">
-                        Submit Action
-                        <svg class="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
-                    </button>
-                    
-                    <div id="action-feedback" class="mt-5 text-sm font-medium hidden rounded-lg p-3.5 border text-center"></div>
-                </div>
+            <div class="hidden md:flex items-center space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                <button id="mode-rl" class="px-4 py-2 text-sm font-bold rounded-lg transition-all bg-white shadow-sm text-blue-600">RL Agent Mode</button>
+                <button id="mode-clinical" class="px-4 py-2 text-sm font-bold rounded-lg transition-all text-slate-500 hover:text-slate-800">Direct Validator</button>
             </div>
 
-            <!-- Right Panel (Observation) -->
-            <div class="lg:col-span-7 h-full">
-                <div class="glass-card flex flex-col h-full bg-white">
-                    <!-- Tab Headers -->
-                    <div class="flex border-b border-slate-200 bg-slate-50/50">
-                        <button class="px-6 py-4 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 bg-white" id="tab-obs">Observation (Patient Data)</button>
-                        <button class="px-6 py-4 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors" id="tab-hist">Action Sequence Logs</button>
+            <div class="flex items-center space-x-4">
+                <div class="text-right">
+                    <div class="text-[0.6rem] font-bold text-slate-400 uppercase tracking-tighter">System Status</div>
+                    <div class="flex items-center space-x-1.5">
+                        <div id="status-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                        <span id="status-text" class="text-xs font-bold text-slate-700">Online & Encrypted</span>
                     </div>
-                    
-                    <!-- Content -->
-                    <div class="p-6 flex-grow">
-                        <!-- Observation Tab -->
-                        <div id="view-obs">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-xs text-slate-500 uppercase tracking-widest font-bold">Real-time Environment State JSON</span>
-                            </div>
-                            <div id="box-obs" class="json-box">Click "Start New Patient" in the left panel to initialize.</div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-6 md:p-8">
+        
+        <!-- RL Environment View -->
+        <div id="view-rl" class="space-y-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- Left Panel: Controls -->
+                <div class="lg:col-span-4 space-y-6">
+                    <div class="glass rounded-2xl p-6 shadow-xl shadow-slate-200/50">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-sm font-bold text-slate-400 uppercase">Episode Metrics</h2>
+                            <button id="btn-reset" class="bg-slate-900 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-800 transition-all flex items-center shadow-lg">
+                                <svg class="w-3.5 h-3.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                New Case
+                            </button>
                         </div>
                         
-                        <!-- History Tab -->
-                        <div id="view-hist" class="hidden">
-                            <div class="flex items-center justify-between mb-3">
-                                <span class="text-xs text-slate-500 uppercase tracking-widest font-bold">Episode Audit Trail</span>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                                <span class="text-[0.6rem] font-bold text-blue-400 uppercase">Total Reward</span>
+                                <div id="val-reward" class="text-2xl font-black text-blue-700 leading-none mt-1">0.00</div>
                             </div>
-                            <div id="box-history" class="json-box bg-slate-800 text-slate-300 border-slate-700 shadow-inner">No actions taken in this episode.</div>
+                            <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200">
+                                <span class="text-[0.6rem] font-bold text-slate-400 uppercase">Step Count</span>
+                                <div id="val-step" class="text-2xl font-black text-slate-700 leading-none mt-1">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="glass rounded-2xl p-6 shadow-xl shadow-slate-200/50">
+                        <h3 class="text-sm font-bold text-slate-900 mb-4 flex items-center">
+                            <svg class="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                            Agent Workspace
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-[0.7rem] font-bold text-slate-500 uppercase ml-1">Safety Action</label>
+                                <select id="input-action" class="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                                    <option value="approve">✓ Approve Safety</option>
+                                    <option value="flag_interaction">⚠️ Interaction Warning</option>
+                                    <option value="flag_dosage">⚡ Dosage Alert</option>
+                                    <option value="flag_contraindication">⛔ Contraindication</option>
+                                    <option value="flag_allergy">💊 Allergy Risk</option>
+                                    <option value="reject">✖ Full Rejection</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[0.7rem] font-bold text-slate-500 uppercase ml-1">Target Medication</label>
+                                <input type="text" id="input-drug" class="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="e.g. Warfarin">
+                            </div>
+                            <div>
+                                <label class="text-[0.7rem] font-bold text-slate-500 uppercase ml-1">Rationale</label>
+                                <textarea id="input-recommendation" rows="2" class="w-full mt-1.5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500" placeholder="Clinical reasoning..."></textarea>
+                            </div>
+                            
+                            <button id="btn-submit" class="w-full bg-blue-600 text-white rounded-xl py-4 flex justify-center items-center text-sm font-bold hover:bg-blue-700 transition-all shadow-lg active:scale-[0.98]">
+                                Execute Action
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panel: State & Feedback -->
+                <div class="lg:col-span-8 space-y-6">
+                    <!-- Dynamic Feedback Card -->
+                    <div id="feedback-card" class="hidden transition-all duration-500 transform translate-y-2">
+                        <div id="feedback-box" class="rounded-2xl p-6 border-l-8 shadow-xl flex items-start space-x-4">
+                            <div id="feedback-icon" class="flex-shrink-0 mt-1"></div>
+                            <div class="flex-grow">
+                                <div class="flex items-center justify-between mb-1">
+                                    <h4 id="feedback-title" class="text-sm font-bold uppercase tracking-tight">Clinical Insight</h4>
+                                    <span id="feedback-badge" class="clinical-badge">AI Verified</span>
+                                </div>
+                                <p id="feedback-text" class="text-sm font-medium leading-relaxed"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabs Container -->
+                    <div class="glass rounded-2xl overflow-hidden shadow-xl shadow-slate-200/50 flex flex-col min-h-[500px]">
+                        <div class="flex border-b border-slate-200 px-6">
+                            <button id="tab-obs" class="py-4 text-sm font-bold tracking-tight px-4 tab-active">Patient Dossier</button>
+                            <button id="tab-hist" class="py-4 text-sm font-bold tracking-tight px-4 text-slate-400 hover:text-slate-600 transition-colors">Action Audit Log</button>
+                        </div>
+                        
+                        <div class="p-6 flex-grow bg-white">
+                            <!-- Observation Tab -->
+                            <div id="panel-obs">
+                                <div id="box-obs" class="mono text-xs text-slate-600 bg-slate-50 p-6 rounded-xl border border-slate-100 overflow-auto max-h-[600px] leading-relaxed">
+                                    {"instruction": "Initiate a case to begin clinical validation process."}
+                                </div>
+                            </div>
+                            
+                            <!-- History Tab -->
+                            <div id="panel-hist" class="hidden">
+                                <div id="box-history" class="space-y-4">
+                                    <div class="text-center py-20 text-slate-400 italic text-sm">Waiting for agent actions...</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-
         </div>
-    </div>
+
+        <!-- Direct Clinical Validator View -->
+        <div id="view-direct" class="hidden space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div class="max-w-4xl mx-auto space-y-8">
+                <div class="text-center space-y-2">
+                    <h2 class="text-3xl font-black text-slate-900">One-Shot Clinical Review</h2>
+                    <p class="text-slate-500 font-medium">Industry-grade validation using multi-layer Hybrid AI Engine.</p>
+                </div>
+
+                <div class="glass p-8 rounded-3xl shadow-2xl border-2 border-slate-200">
+                    <div class="flex items-center justify-between mb-4">
+                        <label class="text-sm font-bold text-slate-900 uppercase">Prescription Content (JSON)</label>
+                        <div class="flex space-x-2">
+                            <button id="btn-sample-1" class="text-[0.65rem] font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md hover:bg-slate-200">Sample: Interaction</button>
+                            <button id="btn-sample-2" class="text-[0.65rem] font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md hover:bg-slate-200">Sample: Allergic</button>
+                        </div>
+                    </div>
+                    <textarea id="direct-input" rows="8" class="w-full mono text-sm bg-slate-950 text-emerald-400 p-6 rounded-2xl shadow-inner border-2 border-slate-800 outline-none focus:border-blue-500 transition-all" placeholder='{ "patient": { ... }, "medications": [ ... ] }'></textarea>
+                    
+                    <button id="btn-direct-check" class="w-full mt-6 bg-slate-900 text-white py-5 rounded-2xl font-black text-lg tracking-wide hover:bg-black transition-all shadow-xl hover:-translate-y-1 active:translate-y-0">
+                        ANALYZE CLINICAL SAFETY
+                    </button>
+                </div>
+
+                <!-- Analysis Results Section -->
+                <div id="direct-results" class="hidden space-y-6">
+                    <div id="direct-summary-card" class="bg-white p-8 rounded-3xl shadow-xl border border-slate-100">
+                        <h3 class="text-lg font-black text-slate-900 mb-4 flex items-center">
+                            <span class="w-1.5 h-6 bg-blue-600 rounded-full mr-3"></span>
+                            Clinical Summary Report
+                        </h3>
+                        <div id="direct-summary-text" class="text-slate-700 leading-relaxed font-medium"></div>
+                    </div>
+
+                    <div id="direct-findings-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Findings will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="max-w-7xl mx-auto p-12 text-center">
+        <div class="text-[0.6rem] font-black text-slate-300 uppercase tracking-[0.2em]">Medical Decision Support System • Powered by OpenEnv RL</div>
+    </footer>
 
     <script>
         const $ = id => document.getElementById(id);
         
         let stepCount = 0;
         let actionHistory = [];
-        let currentTotalReward = 0.0;
-        
-        // Tab switching logic
-        $('tab-obs').onclick = () => {
-            $('view-obs').classList.remove('hidden');
-            $('view-hist').classList.add('hidden');
-            $('tab-obs').className = "px-6 py-4 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 bg-white";
-            $('tab-hist').className = "px-6 py-4 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors";
+        let totalReward = 0.0;
+        let isEpisodeRunning = false;
+
+        // Mode Switching
+        $('mode-rl').onclick = () => {
+            $('view-rl').classList.remove('hidden');
+            $('view-direct').classList.add('hidden');
+            $('mode-rl').className = "px-4 py-2 text-sm font-bold rounded-lg transition-all bg-white shadow-sm text-blue-600";
+            $('mode-clinical').className = "px-4 py-2 text-sm font-bold rounded-lg transition-all text-slate-500 hover:text-slate-800";
         };
-        $('tab-hist').onclick = () => {
-            $('view-obs').classList.add('hidden');
-            $('view-hist').classList.remove('hidden');
-            $('tab-obs').className = "px-6 py-4 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors";
-            $('tab-hist').className = "px-6 py-4 text-sm font-semibold text-blue-600 border-b-2 border-blue-600 bg-white";
+        $('mode-clinical').onclick = () => {
+            $('view-rl').classList.add('hidden');
+            $('view-direct').classList.remove('hidden');
+            $('mode-clinical').className = "px-4 py-2 text-sm font-bold rounded-lg transition-all bg-white shadow-sm text-blue-600";
+            $('mode-rl').className = "px-4 py-2 text-sm font-bold rounded-lg transition-all text-slate-500 hover:text-slate-800";
         };
 
-        function showFeedback(msg, type) {
-            const el = $('action-feedback');
-            el.textContent = msg;
-            el.className = 'mt-5 text-sm font-medium rounded-lg p-3.5 border text-center transition-all duration-300';
+        // UI Helpers
+        function setFeedback(msg, type = 'info') {
+            const card = $('feedback-card');
+            const box = $('feedback-box');
+            const icon = $('feedback-icon');
+            const text = $('feedback-text');
+            const title = $('feedback-title');
             
-            if (type === 'error') {
-                el.classList.add('bg-red-50', 'text-red-700', 'border-red-200');
-            } else if (type === 'success') {
-                el.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-200');
+            card.classList.remove('hidden');
+            
+            if (type === 'success') {
+                box.className = "rounded-2xl p-6 bg-emerald-50 border-l-8 border-emerald-500 shadow-xl flex items-start space-x-4";
+                title.className = "text-sm font-bold text-emerald-800 uppercase tracking-tight";
+                title.textContent = "Clinical Approval";
+                icon.innerHTML = `<div class="bg-emerald-500 rounded-full p-1.5"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg></div>`;
+            } else if (type === 'error') {
+                box.className = "rounded-2xl p-6 bg-red-50 border-l-8 border-red-500 shadow-xl flex items-start space-x-4";
+                title.className = "text-sm font-bold text-red-800 uppercase tracking-tight";
+                title.textContent = "Safety Alert";
+                icon.innerHTML = `<div class="bg-red-500 rounded-full p-1.5"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div>`;
             } else {
-                el.classList.add('bg-amber-50', 'text-amber-700', 'border-amber-200');
+                box.className = "rounded-2xl p-6 bg-blue-50 border-l-8 border-blue-500 shadow-xl flex items-start space-x-4";
+                title.className = "text-sm font-bold text-blue-800 uppercase tracking-tight";
+                title.textContent = "Environment Update";
+                icon.innerHTML = `<div class="bg-blue-500 rounded-full p-1.5"><svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>`;
             }
+            
+            text.textContent = msg;
         }
 
-        async function updateDisplay(data, actionPayload = null) {
-            const obs = data.observation || data;
-            const reward = data.reward != null ? data.reward : null;
-            const done = data.done === true;
-            
-            // Status Tag updating
-            const statusEl = $('val-status');
-            if (done) {
-                statusEl.textContent = 'DONE: Complete';
-                statusEl.className = 'text-blue-700 font-bold text-xs bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-full';
-            } else {
-                statusEl.textContent = 'Active Patient';
-                statusEl.className = 'text-emerald-700 font-bold text-xs bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded-full';
-            }
-            
-            $('val-step').textContent = stepCount.toString();
-            
-            if (reward !== null) {
-                currentTotalReward += reward;
-                // Animate reward text briefly
-                const rewardEl = $('val-reward');
-                rewardEl.textContent = currentTotalReward.toFixed(2);
-                rewardEl.classList.add('opacity-50', 'scale-105');
-                setTimeout(() => rewardEl.classList.remove('opacity-50', 'scale-105'), 200);
-            }
-            
-            $('box-obs').textContent = JSON.stringify(obs, null, 2);
-            
-            if (actionPayload) {
-                actionHistory.push({
-                    step: stepCount,
-                    action: actionPayload,
-                    reward: reward !== null ? reward : '-',
-                    done: done
-                });
-                
-                $('box-history').textContent = actionHistory.map(h => 
-                    `[STEP ${h.step}]\nACTION: ${JSON.stringify(h.action)}\n=> REWARD: ${Number(h.reward).toFixed(2)} | DONE: ${h.done}\n${'-'.repeat(45)}`
-                ).reverse().join('\n\n'); // Reverse to show latest first
-                
-                // Show feedback from environment if present
-                const envFeedback = obs.feedback || '';
-                if (envFeedback) {
-                    if (envFeedback.includes('✅') || envFeedback.toLowerCase().includes('success')) {
-                        showFeedback(envFeedback, 'success');
-                    } else if (envFeedback.includes('❌') || envFeedback.includes('DANGEROUS')) {
-                        showFeedback(envFeedback, 'error');
-                    } else {
-                        showFeedback(envFeedback, 'warn');
-                    }
-                } else {
-                    showFeedback(`Action stepped. Reward: ${reward}`, reward > 0 ? 'success' : 'warn');
-                }
-            } else if (actionHistory.length === 0) {
-                $('box-history').textContent = "No actions taken in this episode.";
-            }
-        }
-
+        // Environment Actions
         $('btn-reset').onclick = async () => {
-            $('box-obs').textContent = "Loading patient data...";
-            $('action-feedback').classList.add('hidden');
-            $('btn-reset').disabled = true;
-            $('btn-submit').disabled = false;
+            const btn = $('btn-reset');
+            btn.disabled = true;
+            $('box-obs').className = "mono text-xs text-slate-400 bg-slate-50 p-6 rounded-xl border border-slate-100 shimmer";
             
             try {
                 const res = await fetch('/reset', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ task_name: 'easy' })
+                    body: JSON.stringify({ task_name: 'medium' })
                 });
                 const data = await res.json();
                 
                 stepCount = 0;
-                currentTotalReward = 0.0;
+                totalReward = 0.0;
                 actionHistory = [];
+                isEpisodeRunning = true;
+                
                 $('val-reward').textContent = "0.00";
+                $('val-step').textContent = "0";
+                $('box-obs').className = "mono text-xs text-slate-600 bg-slate-50 p-6 rounded-xl border border-slate-100 overflow-auto max-h-[600px]";
+                $('box-obs').textContent = JSON.stringify(data.observation || data, null, 2);
+                $('box-history').innerHTML = `<div class="text-center py-20 text-slate-400 italic text-sm">Episode initialized. Analysis required.</div>`;
                 
-                updateDisplay(data);
-                showFeedback("New patient initialized. Ready for review.", "success");
-                
-                $('input-drug').value = '';
-                $('input-recommendation').value = '';
-                $('input-action').value = 'approve';
-                
-                $('tab-obs').click();
+                setFeedback(data.observation?.feedback || "System ready for pharmaceutical analysis.", "info");
             } catch (e) {
-                $('box-obs').textContent = 'Error resetting environment:\n' + e.message;
-                showFeedback("Failed to connect to backend.", "error");
+                setFeedback("Failed to initialize environment: " + e.message, "error");
             }
-            $('btn-reset').disabled = false;
+            btn.disabled = false;
         };
 
         $('btn-submit').onclick = async () => {
-            if ($('val-status').textContent.includes('Waiting')) {
-                showFeedback("Please click 'Start New Patient' first.", "warn");
+            if (!isEpisodeRunning) {
+                setFeedback("Initiate a new case dossier before submitting actions.", "error");
                 return;
             }
-        
+
             const btn = $('btn-submit');
             btn.disabled = true;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline border-2 border-t-white border-transparent rounded-full" viewBox="0 0 24 24"></svg> Processing...`;
-            
-            const innerAction = {
+            btn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white mx-auto" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+
+            const action = {
                 action_type: $('input-action').value,
-                recommendation: $('input-recommendation').value || 'No recommendation'
+                drug_name: $('input-drug').value || null,
+                recommendation: $('input-recommendation').value || "Clinical review performed"
             };
-            if ($('input-drug').value) {
-                innerAction.drug_name = $('input-drug').value;
-            }
-            const actionPayload = { action: innerAction };
-            
+
             try {
                 const res = await fetch('/step', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(actionPayload)
+                    body: JSON.stringify({ action })
                 });
                 const data = await res.json();
                 
-                if (!res.ok) throw new Error(JSON.stringify(data));
-                
                 stepCount++;
-                updateDisplay(data, innerAction);
+                totalReward += (data.reward || 0);
                 
-                if (data.done === true || (data.observation && data.observation.done === true)) {
-                    btn.disabled = true; // Keep disabled if episode over
-                    btn.innerHTML = `Episode Complete`;
-                    return;
+                $('val-reward').textContent = totalReward.toFixed(2);
+                $('val-step').textContent = stepCount.toString();
+                $('box-obs').textContent = JSON.stringify(data.observation, null, 2);
+                
+                // Feedback
+                const fbText = data.observation?.feedback || "";
+                let type = 'info';
+                if (fbText.includes('✅') || data.reward > 0) type = 'success';
+                if (fbText.includes('❌') || data.reward < 0) type = 'error';
+                setFeedback(fbText, type);
+
+                // History record
+                actionHistory.push({ step: stepCount, action, reward: data.reward, feedback: fbText });
+                renderHistory();
+
+                if (data.done) {
+                    isEpisodeRunning = false;
+                    btn.innerHTML = "EPISODE COMPLETE";
+                    btn.className = "w-full bg-slate-200 text-slate-500 rounded-xl py-4 flex justify-center items-center text-sm font-bold cursor-not-allowed";
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = "Execute Action";
                 }
             } catch (e) {
-                showFeedback('Network Error: ' + e.message, 'error');
+                setFeedback("Transmission error: " + e.message, "error");
+                btn.disabled = false;
+                btn.innerHTML = "Execute Action";
             }
+        };
+
+        function renderHistory() {
+            const container = $('box-history');
+            container.innerHTML = actionHistory.map(h => `
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2">
+                    <div class="flex justify-between items-center">
+                        <span class="text-[0.6rem] font-black text-slate-400 uppercase">Step ${h.step} • ${h.action.action_type}</span>
+                        <span class="text-xs font-bold ${h.reward >= 0 ? 'text-emerald-600' : 'text-red-500'}">${h.reward >= 0 ? '+' : ''}${h.reward.toFixed(2)} pts</span>
+                    </div>
+                    <p class="text-xs font-medium text-slate-700">Drug: ${h.action.drug_name || 'System'}</p>
+                    <div class="text-[0.65rem] bg-white border border-slate-100 p-2 rounded italic text-slate-500">${h.feedback}</div>
+                </div>
+            `).reverse().join('');
+        }
+
+        // Direct Clinical Mode logic
+        $('btn-direct-check').onclick = async () => {
+            const raw = $('direct-input').value;
+            if (!raw) return;
             
+            const btn = $('btn-direct-check');
+            btn.disabled = true;
+            btn.textContent = "CONSULTING CLINICAL ENGINE...";
+            
+            try {
+                const res = await fetch('/review', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: raw
+                });
+                const data = await res.json();
+                
+                $('direct-results').classList.remove('hidden');
+                $('direct-summary-text').textContent = data.clinical_summary || "No specific risks detected by AI layer.";
+                
+                const container = $('direct-findings-container');
+                if (data.findings && data.findings.length > 0) {
+                    container.innerHTML = data.findings.map(f => `
+                        <div class="bg-red-50 border border-red-100 p-4 rounded-2xl">
+                            <div class="flex items-center text-red-600 font-bold text-xs uppercase mb-1">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+                                ${f.severity}
+                            </div>
+                            <h5 class="font-bold text-slate-900 text-sm">${f.drug}</h5>
+                            <p class="text-xs text-slate-600 mt-1">${f.issue}</p>
+                            <div class="mt-2 text-[0.65rem] font-bold text-blue-600 bg-white inline-block px-2 py-1 rounded">Rec: ${f.recommendation}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = `<div class="col-span-2 bg-emerald-50 border border-emerald-100 p-8 rounded-2xl text-center text-emerald-700 font-bold">Standard rules passed. No safety triggers reached.</div>`;
+                }
+                
+                btn.scrollIntoView({ behavior: 'smooth' });
+            } catch (e) {
+                alert("Validator Error: " + e.message);
+            }
             btn.disabled = false;
-            btn.innerHTML = originalText;
+            btn.textContent = "ANALYZE CLINICAL SAFETY";
+        };
+
+        const sampleInteraction = {
+          "patient": { "id": "P-1004", "age": 68, "conditions": ["AFib", "Pain Control"], "allergies": [] },
+          "medications": [
+            { "name": "Warfarin", "dosage": 5, "frequency": "once daily" },
+            { "name": "Aspirin", "dosage": 325, "frequency": "once daily" }
+          ]
+        };
+        const sampleAllergy = {
+          "patient": { "id": "P-2001", "age": 42, "conditions": ["Infection"], "allergies": ["Amoxicillin"] },
+          "medications": [
+            { "name": "Amoxicillin", "dosage": 500, "frequency": "twice daily" }
+          ]
+        };
+        
+        $('btn-sample-1').onclick = () => $('direct-input').value = JSON.stringify(sampleInteraction, null, 2);
+        $('btn-sample-2').onclick = () => $('direct-input').value = JSON.stringify(sampleAllergy, null, 2);
+
+        // Tabs
+        $('tab-obs').onclick = () => {
+            $('panel-obs').classList.remove('hidden');
+            $('panel-hist').classList.add('hidden');
+            $('tab-obs').className = "py-4 text-sm font-bold tracking-tight px-4 tab-active";
+            $('tab-hist').className = "py-4 text-sm font-bold tracking-tight px-4 text-slate-400 hover:text-slate-600 transition-colors";
+        };
+        $('tab-hist').onclick = () => {
+            $('panel-obs').classList.add('hidden');
+            $('panel-hist').classList.remove('hidden');
+            $('tab-hist').className = "py-4 text-sm font-bold tracking-tight px-4 tab-active";
+            $('tab-obs').className = "py-4 text-sm font-bold tracking-tight px-4 text-slate-400 hover:text-slate-600 transition-colors";
         };
     </script>
 </body>
