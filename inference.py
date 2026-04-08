@@ -51,10 +51,11 @@ def log_step(step: int, action: str, reward: float, done: bool, error=None):
     )
 
 
-def log_end(success: bool, steps: int, rewards: list):
+def log_end(success: bool, steps: int, rewards: list, score: float):
     success_fmt = "true" if success else "false"
     rewards_fmt = ",".join(f"{r:.2f}" for r in rewards)
-    print(f"[END] success={success_fmt} steps={steps} rewards={rewards_fmt}", flush=True)
+    # Score must be strictly (0, 1). We format it to 2 decimal places.
+    print(f"[END] success={success_fmt} steps={steps} rewards={rewards_fmt} score={score:.2f}", flush=True)
 
 
 # ---------------------------------------------------------------------------
@@ -293,41 +294,24 @@ def get_llm_action(
 # ---------------------------------------------------------------------------
 
 
-async def main():
-    history: List[str] = []
-    rewards: List[float] = []
+async def run_task(client: OpenAI, task_id: str):
+    """Run a single task through to completion or max steps."""
+    history = []
+    rewards = []
     steps_taken = 0
     score = 0.0
     success = False
+    
+    # Task-specific max reward for normalization
+    max_task_reward = 1.0 if task_id == "easy" else (2.0 if task_id == "medium" else 3.0)
 
     try:
         from client import PrescriptionValidationEnv
         from models import PrescriptionAction
 
-        if not API_BASE_URL or not API_KEY:
-            print("[DEBUG] WARNING: API_BASE_URL or API_KEY not set. Using dummy values for test.", flush=True)
-            proxy_url = API_BASE_URL or "https://api.openai.com/v1"
-            proxy_key = API_KEY or "dummy_key"
-        else:
-            proxy_url = API_BASE_URL
-            proxy_key = API_KEY
+        log_start(task=task_id, env=BENCHMARK, model=MODEL_NAME)
 
-        client = OpenAI(base_url=proxy_url, api_key=proxy_key)
-
-        print("[DEBUG] === TESTING LLM CLIENT ===", flush=True)
-        try:
-            test_msg = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=[{"role": "user", "content": "test"}],
-                max_tokens=5
-            )
-            print(f"[DEBUG] ✅ LLM TEST PASSED: {test_msg.choices[0].message.content}", flush=True)
-        except Exception as e:
-            print(f"[DEBUG] ❌ LLM TEST FAILED: {e}", flush=True)
-
-        log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
-
-        print(f"[DEBUG] Initializing environment from Docker image: {IMAGE_NAME}", flush=True)
+        print(f"[DEBUG] Initializing environment for task: {task_id}", flush=True)
         try:
             env = await PrescriptionValidationEnv.from_docker_image(IMAGE_NAME)
         except Exception as e:
@@ -335,10 +319,10 @@ async def main():
             hf_url = f"https://{IMAGE_NAME.replace('/', '-')}.hf.space"
             env = PrescriptionValidationEnv(base_url=hf_url)
 
-        print("[DEBUG] Connected to environment", flush=True)
+        print(f"[DEBUG] Connected to environment for {task_id}", flush=True)
 
-        result = await env.reset(task_id=TASK_NAME)
-        print(f"[DEBUG] Environment reset: {result.observation.feedback}", flush=True)
+        result = await env.reset(task_id=task_id)
+        print(f"[DEBUG] {task_id} reset: {result.observation.feedback}", flush=True)
 
         for step in range(1, MAX_STEPS + 1):
             if result.done:
@@ -378,26 +362,55 @@ async def main():
                 break
 
         total_reward = sum(rewards)
-        score = total_reward / MAX_TOTAL_REWARD if MAX_TOTAL_REWARD > 0 else 0.0
-        score = min(max(score, 0.0), 1.0)
+        score = total_reward / max_task_reward if max_task_reward > 0 else 0.0
+            
+        # IMPORTANT: Force score to be strictly (0, 1) as required by hackathon validator
+        score = min(max(score, 0.01), 0.99)
+        
         success = score >= SUCCESS_SCORE_THRESHOLD
-
-        print(f"[DEBUG] Final score: {score:.3f}, Success: {success}", flush=True)
+        print(f"[DEBUG] {task_id} final score: {score:.3f}, Success: {success}", flush=True)
 
     except Exception as e:
-        print(f"[DEBUG] Error during inference: {e}", flush=True)
-        import traceback
-
-        traceback.print_exc()
-
+        print(f"[DEBUG] Error during {task_id} inference: {e}", flush=True)
+        score = 0.01 
     finally:
         try:
             if 'env' in locals():
                 await env.close()
-        except Exception as e:
-            print(f"[DEBUG] env.close() error: {e}", flush=True)
+        except Exception:
+            pass
+        log_end(success=success, steps=steps_taken, rewards=rewards, score=score)
 
-        log_end(success=success, steps=steps_taken, rewards=rewards)
+
+async def main():
+    if not API_BASE_URL or not API_KEY:
+        print("[DEBUG] WARNING: API_BASE_URL or API_KEY not set. Using dummy values for test.", flush=True)
+        proxy_url = API_BASE_URL or "https://api.openai.com/v1"
+        proxy_key = API_KEY or "dummy_key"
+    else:
+        proxy_url = API_BASE_URL
+        proxy_key = API_KEY
+
+    client = OpenAI(base_url=proxy_url, api_key=proxy_key)
+
+    print("[DEBUG] === TESTING LLM CLIENT ===", flush=True)
+    try:
+        client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": "test"}],
+            max_tokens=5
+        )
+        print("[DEBUG] ✅ LLM TEST PASSED", flush=True)
+    except Exception as e:
+        print(f"[DEBUG] ❌ LLM TEST FAILED: {e}", flush=True)
+
+    # Run easy, medium, and hard tasks to satisfy "at least 3 tasks" grader requirement
+    tasks = ["easy", "medium", "hard"]
+    for task_id in tasks:
+        try:
+            await run_task(client, task_id)
+        except Exception as e:
+            print(f"[DEBUG] Task {task_id} failed gracefully: {e}", flush=True)
 
 
 if __name__ == "__main__":
