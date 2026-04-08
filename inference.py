@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Environment variables (defaults required by hackathon spec)
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api-inference.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-HF_TOKEN = os.getenv("HF_TOKEN")
+API_KEY = os.getenv("API_KEY") or os.getenv("HF_TOKEN")
 IMAGE_NAME = os.getenv("IMAGE_NAME", "suhellll/prescription-validator")
 
 TASK_NAME = os.getenv("TASK_NAME", "easy")
@@ -268,10 +268,10 @@ async def main():
     from client import PrescriptionValidationEnv
     from models import PrescriptionAction
 
-    if HF_TOKEN is None:
-        raise ValueError("HF_TOKEN environment variable is required")
+    if API_KEY is None:
+        raise ValueError("API_KEY environment variable is required")
 
-    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
     history: List[str] = []
     rewards: List[float] = []
