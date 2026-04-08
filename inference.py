@@ -325,51 +325,49 @@ async def main():
     log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
 
     try:
-        hf_url = f"https://{IMAGE_NAME.replace('/', '-')}.hf.space"
-        print(f"[DEBUG] Connecting to HuggingFace Space: {hf_url}", flush=True)
+        print(f"[DEBUG] Initializing environment from Docker image: {IMAGE_NAME}", flush=True)
+        env = await PrescriptionValidationEnv.from_docker_image(IMAGE_NAME)
+        print("[DEBUG] Connected to environment", flush=True)
 
-        async with PrescriptionValidationEnv(base_url=hf_url) as env:
-            print("[DEBUG] Connected to environment", flush=True)
+        result = await env.reset(task_id=TASK_NAME)
+        print(f"[DEBUG] Environment reset: {result.observation.feedback}", flush=True)
 
-            result = await env.reset(task_id=TASK_NAME)
-            print(f"[DEBUG] Environment reset: {result.observation.feedback}", flush=True)
+        for step in range(1, MAX_STEPS + 1):
+            if result.done:
+                break
 
-            for step in range(1, MAX_STEPS + 1):
-                if result.done:
-                    break
+            obs_dict = result.observation.model_dump()
+            action_dict = get_llm_action(client, obs_dict, history)
 
-                obs_dict = result.observation.model_dump()
-                action_dict = get_llm_action(client, obs_dict, history)
-
-                try:
-                    action = PrescriptionAction(**action_dict)
-                except Exception as e:
-                    print(f"[DEBUG] Invalid action format: {e}, using fallback", flush=True)
-                    action = PrescriptionAction(
-                        action_type="request_clarification", recommendation="Action parsing error"
-                    )
-
-                result = await env.step(action)
-
-                reward = result.reward or 0.0
-                rewards.append(reward)
-                steps_taken = step
-
-                log_step(
-                    step=step,
-                    action=json.dumps(action_dict),
-                    reward=reward,
-                    done=result.done,
-                    error=None,
+            try:
+                action = PrescriptionAction(**action_dict)
+            except Exception as e:
+                print(f"[DEBUG] Invalid action format: {e}, using fallback", flush=True)
+                action = PrescriptionAction(
+                    action_type="request_clarification", recommendation="Action parsing error"
                 )
 
-                history.append(
-                    f"Step {step}: {action_dict.get('action_type')} -> "
-                    f"reward={reward:.2f}, feedback: {result.observation.feedback[:100]}"
-                )
+            result = await env.step(action)
 
-                if result.done:
-                    break
+            reward = result.reward or 0.0
+            rewards.append(reward)
+            steps_taken = step
+
+            log_step(
+                step=step,
+                action=json.dumps(action_dict),
+                reward=reward,
+                done=result.done,
+                error=None,
+            )
+
+            history.append(
+                f"Step {step}: {action_dict.get('action_type')} -> "
+                f"reward={reward:.2f}, feedback: {result.observation.feedback[:100]}"
+            )
+
+            if result.done:
+                break
 
         total_reward = sum(rewards)
         score = total_reward / MAX_TOTAL_REWARD if MAX_TOTAL_REWARD > 0 else 0.0
@@ -383,9 +381,15 @@ async def main():
         import traceback
 
         traceback.print_exc()
-        raise
 
-    log_end(success=success, steps=steps_taken, rewards=rewards)
+    finally:
+        try:
+            if 'env' in locals():
+                await env.close()
+        except Exception as e:
+            print(f"[DEBUG] env.close() error: {e}", flush=True)
+
+        log_end(success=success, steps=steps_taken, rewards=rewards)
 
 
 if __name__ == "__main__":
