@@ -15,10 +15,10 @@ from openai import OpenAI
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Environment variables (defaults required by hackathon spec)
-API_BASE_URL = os.getenv("API_BASE_URL", "https://api-inference.huggingface.co/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
-API_KEY = os.getenv("API_KEY") or os.getenv("HF_TOKEN")
+# Environment variables (strictly required by hackathon proxy spec)
+API_BASE_URL = os.getenv("API_BASE_URL")
+API_KEY = os.getenv("API_KEY")
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
 IMAGE_NAME = os.getenv("IMAGE_NAME", "suhellll/prescription-validator")
 
 TASK_NAME = os.getenv("TASK_NAME", "easy")
@@ -268,8 +268,8 @@ async def main():
     from client import PrescriptionValidationEnv
     from models import PrescriptionAction
 
-    if API_KEY is None:
-        raise ValueError("API_KEY environment variable is required")
+    if not API_BASE_URL or not API_KEY:
+        raise ValueError("API_BASE_URL and API_KEY must be set. The hackathon platform will inject these automatically.")
 
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
