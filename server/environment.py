@@ -4,13 +4,14 @@ Validates prescriptions against a drug database and grades agent actions
 using deterministic clinical rules.
 """
 
+import os
 import random
+import sys
 import uuid
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
 from openenv.core.env_server import Environment
 
-import sys
-import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models import PrescriptionAction, PrescriptionObservation, PrescriptionState
@@ -51,7 +52,7 @@ class PrescriptionValidationEnvironment(Environment):
         seed: Optional[int] = None,
         episode_id: Optional[str] = None,
         task_id: str = "easy",
-        **kwargs
+        **kwargs,
     ) -> PrescriptionObservation:
         if seed is not None:
             random.seed(seed)
@@ -65,8 +66,7 @@ class PrescriptionValidationEnvironment(Environment):
         self._episode_complete = False
 
         critical_count = sum(
-            1 for issue in self._ground_truth_issues
-            if issue.get("severity") == "critical"
+            1 for issue in self._ground_truth_issues if issue.get("severity") == "critical"
         )
 
         self._state = PrescriptionState(
@@ -81,7 +81,7 @@ class PrescriptionValidationEnvironment(Environment):
             critical_issues_found=0,
             total_critical_issues=critical_count,
             prescription_status="pending_review",
-            safety_score=0.0
+            safety_score=0.0,
         )
 
         return PrescriptionObservation(
@@ -95,16 +95,17 @@ class PrescriptionValidationEnvironment(Environment):
             task_id=task_id,
             step_count=0,
             available_actions=[
-                "approve", "flag_interaction", "flag_dosage",
-                "flag_contraindication", "flag_allergy", "reject"
-            ]
+                "approve",
+                "flag_interaction",
+                "flag_dosage",
+                "flag_contraindication",
+                "flag_allergy",
+                "reject",
+            ],
         )
 
     def step(
-        self,
-        action: PrescriptionAction,
-        timeout_s: Optional[float] = None,
-        **kwargs
+        self, action: PrescriptionAction, timeout_s: Optional[float] = None, **kwargs
     ) -> PrescriptionObservation:
         self._state.step_count += 1
 
@@ -127,7 +128,7 @@ class PrescriptionValidationEnvironment(Environment):
             feedback=feedback,
             task_id=self._task_id,
             step_count=self._state.step_count,
-            available_actions=self._get_available_actions()
+            available_actions=self._get_available_actions(),
         )
 
     @property
@@ -149,7 +150,9 @@ class PrescriptionValidationEnvironment(Environment):
             elif case_type == "dosage":
                 prescription, patient, issues = self._prescription_gen.generate_dosage_error()
             else:
-                prescription, patient, issues = self._prescription_gen.generate_contraindication_case()
+                prescription, patient, issues = (
+                    self._prescription_gen.generate_contraindication_case()
+                )
 
         elif task_id == "medium":
             case_type = random.choice(["interaction", "dosage", "contraindication"])
@@ -158,7 +161,9 @@ class PrescriptionValidationEnvironment(Environment):
             elif case_type == "dosage":
                 prescription, patient, issues = self._prescription_gen.generate_dosage_error()
             else:
-                prescription, patient, issues = self._prescription_gen.generate_contraindication_case()
+                prescription, patient, issues = (
+                    self._prescription_gen.generate_contraindication_case()
+                )
 
         else:  # hard
             prescription, patient, issues = self._prescription_gen.generate_complex_case()
@@ -183,24 +188,31 @@ class PrescriptionValidationEnvironment(Environment):
                 feedback = "Correct! This prescription is safe to dispense."
             else:
                 missed_critical = sum(
-                    1 for issue in self._ground_truth_issues
-                    if issue.get("severity") == "critical"
-                    and issue not in self._identified_issues
+                    1
+                    for issue in self._ground_truth_issues
+                    if issue.get("severity") == "critical" and issue not in self._identified_issues
                 )
                 reward = -1.0 * missed_critical
-                self._state.false_negatives = len(self._ground_truth_issues) - len(self._issues_correctly_found)
+                self._state.false_negatives = len(self._ground_truth_issues) - len(
+                    self._issues_correctly_found
+                )
                 feedback = (
                     f"UNSAFE! You approved a prescription with {len(self._ground_truth_issues)} issue(s). "
                     f"Missed critical issues: {missed_critical}. "
-                    "Issues: " + "; ".join(
-                        f"{issue['type']}: {issue['description']}" for issue in self._ground_truth_issues
+                    "Issues: "
+                    + "; ".join(
+                        f"{issue['type']}: {issue['description']}"
+                        for issue in self._ground_truth_issues
                     )
                 )
 
         elif action.action_type == "reject":
             done = True
             if len(self._ground_truth_issues) > 0:
-                reward = 0.5 + (0.5 * (len(self._issues_correctly_found) / max(1, len(self._ground_truth_issues))))
+                reward = 0.5 + (
+                    0.5
+                    * (len(self._issues_correctly_found) / max(1, len(self._ground_truth_issues)))
+                )
                 feedback = f"Correct rejection. Found {len(self._issues_correctly_found)}/{len(self._ground_truth_issues)} issues."
             else:
                 reward = -0.5
@@ -211,7 +223,9 @@ class PrescriptionValidationEnvironment(Environment):
             reward, feedback = self._check_flagged_issue(action, expected_type="drug_interaction")
 
         elif action.action_type == "flag_dosage":
-            reward, feedback = self._check_flagged_issue(action, expected_type=["dosage_too_high", "dosage_too_low"])
+            reward, feedback = self._check_flagged_issue(
+                action, expected_type=["dosage_too_high", "dosage_too_low"]
+            )
 
         elif action.action_type == "flag_contraindication":
             reward, feedback = self._check_flagged_issue(action, expected_type="contraindication")
@@ -221,7 +235,9 @@ class PrescriptionValidationEnvironment(Environment):
 
         elif action.action_type == "request_clarification":
             reward = 0.0
-            feedback = "Clarification requested. In a real system, this would contact the prescriber."
+            feedback = (
+                "Clarification requested. In a real system, this would contact the prescriber."
+            )
 
         if self._state.step_count >= self.MAX_STEPS:
             done = True
@@ -231,7 +247,9 @@ class PrescriptionValidationEnvironment(Environment):
 
         return reward, feedback, done
 
-    def _check_flagged_issue(self, action: PrescriptionAction, expected_type: Any) -> Tuple[float, str]:
+    def _check_flagged_issue(
+        self, action: PrescriptionAction, expected_type: Any
+    ) -> Tuple[float, str]:
         expected_types = [expected_type] if isinstance(expected_type, str) else expected_type
 
         matching_issue = None
@@ -239,9 +257,9 @@ class PrescriptionValidationEnvironment(Environment):
             if issue["type"] in expected_types:
                 if action.drug_name:
                     drug_match = (
-                        issue.get("drug", "").lower() == action.drug_name.lower() or
-                        issue.get("drug1", "").lower() == action.drug_name.lower() or
-                        issue.get("drug2", "").lower() == action.drug_name.lower()
+                        issue.get("drug", "").lower() == action.drug_name.lower()
+                        or issue.get("drug1", "").lower() == action.drug_name.lower()
+                        or issue.get("drug2", "").lower() == action.drug_name.lower()
                     )
                     if drug_match:
                         matching_issue = issue
@@ -256,12 +274,14 @@ class PrescriptionValidationEnvironment(Environment):
                 self._issues_correctly_found.add(issue_id)
                 self._state.issues_found += 1
 
-                self._identified_issues.append({
-                    "drug": action.drug_name or matching_issue.get("drug", ""),
-                    "issue": matching_issue["type"],
-                    "severity": matching_issue.get("severity", "warning"),
-                    "description": matching_issue["description"]
-                })
+                self._identified_issues.append(
+                    {
+                        "drug": action.drug_name or matching_issue.get("drug", ""),
+                        "issue": matching_issue["type"],
+                        "severity": matching_issue.get("severity", "warning"),
+                        "description": matching_issue["description"],
+                    }
+                )
 
                 if matching_issue.get("severity") == "critical":
                     reward = 1.0
@@ -279,11 +299,13 @@ class PrescriptionValidationEnvironment(Environment):
                 feedback = "This issue was already identified."
         else:
             self._state.false_positives += 1
-            self._false_positives.append({
-                "action": action.action_type,
-                "drug": action.drug_name,
-                "claimed_issue": action.issue_type
-            })
+            self._false_positives.append(
+                {
+                    "action": action.action_type,
+                    "drug": action.drug_name,
+                    "claimed_issue": action.issue_type,
+                }
+            )
             reward = -0.2
             feedback = f"False positive: No {expected_types[0]} issue with {action.drug_name or 'these drugs'}."
 
@@ -300,46 +322,64 @@ class PrescriptionValidationEnvironment(Environment):
             drug = med.get("drug", "")
 
             dosage_result = DRUG_DB.check_dosage(drug, med.get("dosage_mg", 0))
-            results.append({
-                "check": "dosage", "drug": drug,
-                "status": "pass" if not dosage_result else "fail",
-                "message": dosage_result or "Dosage within safe range"
-            })
+            results.append(
+                {
+                    "check": "dosage",
+                    "drug": drug,
+                    "status": "pass" if not dosage_result else "fail",
+                    "message": dosage_result or "Dosage within safe range",
+                }
+            )
 
             allergy_result = DRUG_DB.check_allergy(drug, self._current_patient.get("allergies", []))
-            results.append({
-                "check": "allergy", "drug": drug,
-                "status": "pass" if not allergy_result else "fail",
-                "message": allergy_result or "No allergy concerns"
-            })
+            results.append(
+                {
+                    "check": "allergy",
+                    "drug": drug,
+                    "status": "pass" if not allergy_result else "fail",
+                    "message": allergy_result or "No allergy concerns",
+                }
+            )
 
-            contra_result = DRUG_DB.check_contraindication(drug, self._current_patient.get("conditions", []))
-            results.append({
-                "check": "contraindication", "drug": drug,
-                "status": "pass" if not contra_result else "fail",
-                "message": contra_result or "No contraindications"
-            })
+            contra_result = DRUG_DB.check_contraindication(
+                drug, self._current_patient.get("conditions", [])
+            )
+            results.append(
+                {
+                    "check": "contraindication",
+                    "drug": drug,
+                    "status": "pass" if not contra_result else "fail",
+                    "message": contra_result or "No contraindications",
+                }
+            )
 
         meds = self._current_prescription.get("medications", [])
         for i, med1 in enumerate(meds):
-            for med2 in meds[i+1:]:
+            for med2 in meds[i + 1 :]:
                 drug1 = med1.get("drug", "")
                 drug2 = med2.get("drug", "")
                 interaction = DRUG_DB.check_interaction(drug1, drug2)
                 if interaction:
                     severity, description = interaction
-                    results.append({
-                        "check": "interaction", "drug": f"{drug1} + {drug2}",
-                        "status": "fail",
-                        "message": f"{severity.upper()}: {description}"
-                    })
+                    results.append(
+                        {
+                            "check": "interaction",
+                            "drug": f"{drug1} + {drug2}",
+                            "status": "fail",
+                            "message": f"{severity.upper()}: {description}",
+                        }
+                    )
 
         return results
 
     def _get_available_actions(self) -> List[str]:
         return [
-            "approve", "flag_interaction", "flag_dosage",
-            "flag_contraindication", "flag_allergy", "reject"
+            "approve",
+            "flag_interaction",
+            "flag_dosage",
+            "flag_contraindication",
+            "flag_allergy",
+            "reject",
         ]
 
     def _calculate_safety_score(self) -> float:
@@ -351,10 +391,10 @@ class PrescriptionValidationEnvironment(Environment):
         if total_issues > 0:
             missed = total_issues - found_issues
             missed_critical = self._state.total_critical_issues - self._state.critical_issues_found
-            score -= (missed * 0.2)
-            score -= (missed_critical * 0.3)
+            score -= missed * 0.2
+            score -= missed_critical * 0.3
 
-        score -= (self._state.false_positives * 0.1)
+        score -= self._state.false_positives * 0.1
         return max(0.0, min(1.0, score))
 
 

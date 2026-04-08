@@ -1,14 +1,15 @@
 """FastAPI server for the prescription validation environment."""
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi.responses import HTMLResponse
 from openenv.core.env_server import create_fastapi_app
-from server.environment import PrescriptionValidationEnvironment
+
 from models import PrescriptionAction, PrescriptionObservation
+from server.environment import PrescriptionValidationEnvironment
 
 app = create_fastapi_app(
     env=PrescriptionValidationEnvironment,
@@ -27,11 +28,14 @@ async def serve_ui():
     except FileNotFoundError:
         return "<h1>Interface Building...</h1>"
 
+
 def main():
     import uvicorn
+
     # Configured for Hugging Face Spaces port, defaulting to 7860
     port = int(os.environ.get("PORT", 7860))
     uvicorn.run("server.app:app", host="0.0.0.0", port=port)
+
 
 if __name__ == "__main__":
     main()

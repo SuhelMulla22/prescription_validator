@@ -1,12 +1,14 @@
 """Client for connecting to the prescription validation environment server."""
 
-from typing import Optional
-from openenv.core.env_client import EnvClient
 from openenv.core.client_types import StepResult
+from openenv.core.env_client import EnvClient
+
 from models import PrescriptionAction, PrescriptionObservation, PrescriptionState
 
 
-class PrescriptionValidationEnv(EnvClient[PrescriptionAction, PrescriptionObservation, PrescriptionState]):
+class PrescriptionValidationEnv(
+    EnvClient[PrescriptionAction, PrescriptionObservation, PrescriptionState]
+):
     """Handles communication between user code and the environment server."""
 
     def _step_payload(self, action: PrescriptionAction) -> dict:
@@ -32,13 +34,11 @@ class PrescriptionValidationEnv(EnvClient[PrescriptionAction, PrescriptionObserv
             feedback=obs_data.get("feedback", ""),
             task_id=obs_data.get("task_id", "easy"),
             step_count=obs_data.get("step_count", 0),
-            available_actions=obs_data.get("available_actions", [])
+            available_actions=obs_data.get("available_actions", []),
         )
 
         return StepResult(
-            observation=observation,
-            reward=payload.get("reward"),
-            done=payload.get("done", False)
+            observation=observation, reward=payload.get("reward"), done=payload.get("done", False)
         )
 
     def _parse_state(self, payload: dict) -> PrescriptionState:
@@ -54,7 +54,7 @@ class PrescriptionValidationEnv(EnvClient[PrescriptionAction, PrescriptionObserv
             critical_issues_found=payload.get("critical_issues_found", 0),
             total_critical_issues=payload.get("total_critical_issues", 0),
             prescription_status=payload.get("prescription_status", "pending_review"),
-            safety_score=payload.get("safety_score", 0.0)
+            safety_score=payload.get("safety_score", 0.0),
         )
 
 

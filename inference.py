@@ -4,13 +4,13 @@ Follows the mandatory [START], [STEP], [END] logging format
 required by the OpenEnv hackathon grader.
 """
 
-import os
-import sys
 import asyncio
 import json
+import os
+import sys
 import time
+from typing import Any, Dict, List
 
-from typing import List, Dict, Any
 from openai import OpenAI
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -35,16 +35,20 @@ MAX_TOKENS = 512
 # Logging helpers — exact format required by the grader, do not modify
 # ---------------------------------------------------------------------------
 
+
 def log_start(task: str, env: str, model: str):
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
 
 def log_step(step: int, action: str, reward: float, done: bool, error=None):
-    action_str = str(action).replace('\n', ' ').replace('\r', '')
+    action_str = str(action).replace("\n", " ").replace("\r", "")
     reward_fmt = f"{reward:.2f}"
     done_fmt = "true" if done else "false"
     error_fmt = "null" if error is None else str(error)
-    print(f"[STEP] step={step} action={action_str} reward={reward_fmt} done={done_fmt} error={error_fmt}", flush=True)
+    print(
+        f"[STEP] step={step} action={action_str} reward={reward_fmt} done={done_fmt} error={error_fmt}",
+        flush=True,
+    )
 
 
 def log_end(success: bool, steps: int, rewards: list):
@@ -149,6 +153,7 @@ No explanations outside the JSON.
 # Prompt construction and response parsing
 # ---------------------------------------------------------------------------
 
+
 def build_user_prompt(observation: Dict[str, Any], history: List[str]) -> str:
     prescription = observation.get("prescription", {})
     patient = observation.get("patient_info", {})
@@ -180,13 +185,13 @@ def build_user_prompt(observation: Dict[str, Any], history: List[str]) -> str:
     return f"""PRESCRIPTION TO REVIEW
 
 PATIENT INFORMATION:
-  Age: {patient.get('age')} years
-  Weight: {patient.get('weight_kg')} kg
+  Age: {patient.get("age")} years
+  Weight: {patient.get("weight_kg")} kg
   Medical Conditions: {conditions_str}
   Allergies: {allergies_str}
   Current Medications: {current_meds_str}
-  Kidney Function: {patient.get('kidney_function', 'unknown')}
-  Liver Function: {patient.get('liver_function', 'unknown')}
+  Kidney Function: {patient.get("kidney_function", "unknown")}
+  Liver Function: {patient.get("liver_function", "unknown")}
 
 PRESCRIBED MEDICATIONS:
 {meds_str}
@@ -208,8 +213,8 @@ Respond with JSON action only."""
 def parse_llm_response(text: str) -> Dict[str, Any]:
     """Extract a valid action dict from the LLM response text."""
     try:
-        start = text.find('{')
-        end = text.rfind('}') + 1
+        start = text.find("{")
+        end = text.rfind("}") + 1
         if start >= 0 and end > start:
             action_dict = json.loads(text[start:end])
             if "action_type" in action_dict:
@@ -222,20 +227,44 @@ def parse_llm_response(text: str) -> Dict[str, Any]:
     # Fallback: detect action intent from free-text
     text_lower = text.lower()
     if "approve" in text_lower and "safe" in text_lower:
-        return {"action_type": "approve", "recommendation": "Prescription appears safe based on available information"}
+        return {
+            "action_type": "approve",
+            "recommendation": "Prescription appears safe based on available information",
+        }
     if "interaction" in text_lower:
-        return {"action_type": "flag_interaction", "severity": "warning", "recommendation": "Potential drug interaction detected"}
+        return {
+            "action_type": "flag_interaction",
+            "severity": "warning",
+            "recommendation": "Potential drug interaction detected",
+        }
     if "dosage" in text_lower or "dose" in text_lower:
-        return {"action_type": "flag_dosage", "severity": "warning", "recommendation": "Dosage may need adjustment"}
+        return {
+            "action_type": "flag_dosage",
+            "severity": "warning",
+            "recommendation": "Dosage may need adjustment",
+        }
     if "allergy" in text_lower or "allergic" in text_lower:
-        return {"action_type": "flag_allergy", "severity": "critical", "recommendation": "Patient may be allergic to prescribed medication"}
+        return {
+            "action_type": "flag_allergy",
+            "severity": "critical",
+            "recommendation": "Patient may be allergic to prescribed medication",
+        }
     if "contraindication" in text_lower:
-        return {"action_type": "flag_contraindication", "severity": "warning", "recommendation": "Medication may be contraindicated"}
+        return {
+            "action_type": "flag_contraindication",
+            "severity": "warning",
+            "recommendation": "Medication may be contraindicated",
+        }
 
-    return {"action_type": "request_clarification", "recommendation": "Need more information to assess safety"}
+    return {
+        "action_type": "request_clarification",
+        "recommendation": "Need more information to assess safety",
+    }
 
 
-def get_llm_action(client: OpenAI, observation: Dict[str, Any], history: List[str]) -> Dict[str, Any]:
+def get_llm_action(
+    client: OpenAI, observation: Dict[str, Any], history: List[str]
+) -> Dict[str, Any]:
     """Query the LLM for a clinical action given the current observation."""
     user_prompt = build_user_prompt(observation, history)
 
@@ -257,19 +286,25 @@ def get_llm_action(client: OpenAI, observation: Dict[str, Any], history: List[st
     except Exception as e:
         print(f"[DEBUG] LLM request failed: {e}", flush=True)
         time.sleep(2)
-        return {"action_type": "request_clarification", "recommendation": f"Error getting LLM response: {e}"}
+        return {
+            "action_type": "request_clarification",
+            "recommendation": f"Error getting LLM response: {e}",
+        }
 
 
 # ---------------------------------------------------------------------------
 # Main inference loop
 # ---------------------------------------------------------------------------
 
+
 async def main():
     from client import PrescriptionValidationEnv
     from models import PrescriptionAction
 
     if not API_BASE_URL or not API_KEY:
-        raise ValueError("API_BASE_URL and API_KEY must be set. The hackathon platform will inject these automatically.")
+        raise ValueError(
+            "API_BASE_URL and API_KEY must be set. The hackathon platform will inject these automatically."
+        )
 
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
 
@@ -303,8 +338,7 @@ async def main():
                 except Exception as e:
                     print(f"[DEBUG] Invalid action format: {e}, using fallback", flush=True)
                     action = PrescriptionAction(
-                        action_type="request_clarification",
-                        recommendation="Action parsing error"
+                        action_type="request_clarification", recommendation="Action parsing error"
                     )
 
                 result = await env.step(action)
@@ -318,7 +352,7 @@ async def main():
                     action=json.dumps(action_dict),
                     reward=reward,
                     done=result.done,
-                    error=None
+                    error=None,
                 )
 
                 history.append(
@@ -339,6 +373,7 @@ async def main():
     except Exception as e:
         print(f"[DEBUG] Error during inference: {e}", flush=True)
         import traceback
+
         traceback.print_exc()
 
     log_end(success=success, steps=steps_taken, rewards=rewards)

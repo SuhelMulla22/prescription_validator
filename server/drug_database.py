@@ -5,7 +5,7 @@ and generators for test cases of varying difficulty. Data is simplified
 from FDA drug interaction guidelines for educational use.
 """
 
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 
 class DrugDatabase:
@@ -38,7 +38,11 @@ class DrugDatabase:
                 "class": "ACE inhibitor",
                 "max_daily_dose_mg": 40,
                 "min_daily_dose_mg": 5,
-                "contraindications": ["Pregnancy", "Bilateral renal artery stenosis", "Angioedema history"],
+                "contraindications": [
+                    "Pregnancy",
+                    "Bilateral renal artery stenosis",
+                    "Angioedema history",
+                ],
                 "interactions": ["Spironolactone", "Potassium supplements"],
                 "requires_monitoring": True,
                 "requires_kidney_adjustment": True,
@@ -132,7 +136,10 @@ class DrugDatabase:
                 "class": "benzodiazepine",
                 "max_daily_dose_mg": 10,
                 "min_daily_dose_mg": 0.5,
-                "contraindications": ["Acute narrow-angle glaucoma", "Severe respiratory insufficiency"],
+                "contraindications": [
+                    "Acute narrow-angle glaucoma",
+                    "Severe respiratory insufficiency",
+                ],
                 "interactions": ["Opioids", "Alcohol"],
                 "requires_monitoring": True,
                 "requires_kidney_adjustment": False,
@@ -189,9 +196,8 @@ class DrugDatabase:
         """Return (severity, description) if an interaction exists, else None."""
         drug1, drug2 = drug1.title(), drug2.title()
 
-        severity = (
-            self.interaction_severity.get((drug1, drug2))
-            or self.interaction_severity.get((drug2, drug1))
+        severity = self.interaction_severity.get((drug1, drug2)) or self.interaction_severity.get(
+            (drug2, drug1)
         )
         if severity:
             return (severity, f"{drug1} and {drug2} interaction")
@@ -221,7 +227,9 @@ class DrugDatabase:
             return f"Dosage too low: {dosage_mg}mg below minimum {min_dose}mg"
         return None
 
-    def check_contraindication(self, drug_name: str, patient_conditions: List[str]) -> Optional[str]:
+    def check_contraindication(
+        self, drug_name: str, patient_conditions: List[str]
+    ) -> Optional[str]:
         """Return an error message if the drug is contraindicated, else None."""
         drug_info = self.get_drug_info(drug_name)
         if not drug_info:
@@ -265,9 +273,9 @@ class PrescriptionGenerator:
                     "dosage_mg": 10,
                     "frequency": "once daily",
                     "route": "oral",
-                    "duration": "30 days"
+                    "duration": "30 days",
                 }
-            ]
+            ],
         }
         patient = {
             "age": 55,
@@ -276,7 +284,7 @@ class PrescriptionGenerator:
             "allergies": [],
             "current_medications": [],
             "kidney_function": "normal",
-            "liver_function": "normal"
+            "liver_function": "normal",
         }
         return prescription, patient
 
@@ -292,7 +300,7 @@ class PrescriptionGenerator:
                     "dosage_mg": 5,
                     "frequency": "once daily",
                     "route": "oral",
-                    "duration": "ongoing"
+                    "duration": "ongoing",
                 },
                 {
                     "drug": "Aspirin",
@@ -300,9 +308,9 @@ class PrescriptionGenerator:
                     "dosage_mg": 81,
                     "frequency": "once daily",
                     "route": "oral",
-                    "duration": "ongoing"
-                }
-            ]
+                    "duration": "ongoing",
+                },
+            ],
         }
         patient = {
             "age": 68,
@@ -311,7 +319,7 @@ class PrescriptionGenerator:
             "allergies": [],
             "current_medications": ["Warfarin"],
             "kidney_function": "normal",
-            "liver_function": "normal"
+            "liver_function": "normal",
         }
         issues = [
             {
@@ -320,7 +328,7 @@ class PrescriptionGenerator:
                 "drug1": "Warfarin",
                 "drug2": "Aspirin",
                 "description": "Both are anticoagulants - major bleeding risk",
-                "recommendation": "Use only one anticoagulant or use under close monitoring"
+                "recommendation": "Use only one anticoagulant or use under close monitoring",
             }
         ]
         return prescription, patient, issues
@@ -337,9 +345,9 @@ class PrescriptionGenerator:
                     "dosage_mg": 3000,
                     "frequency": "once daily",
                     "route": "oral",
-                    "duration": "30 days"
+                    "duration": "30 days",
                 }
-            ]
+            ],
         }
         patient = {
             "age": 62,
@@ -348,7 +356,7 @@ class PrescriptionGenerator:
             "allergies": [],
             "current_medications": [],
             "kidney_function": "normal",
-            "liver_function": "normal"
+            "liver_function": "normal",
         }
         issues = [
             {
@@ -356,7 +364,7 @@ class PrescriptionGenerator:
                 "severity": "warning",
                 "drug": "Metformin",
                 "description": "3000mg exceeds maximum daily dose of 2550mg",
-                "recommendation": "Reduce to maximum 2550mg daily or split into multiple doses"
+                "recommendation": "Reduce to maximum 2550mg daily or split into multiple doses",
             }
         ]
         return prescription, patient, issues
@@ -373,9 +381,9 @@ class PrescriptionGenerator:
                     "dosage_mg": 500,
                     "frequency": "three times daily",
                     "route": "oral",
-                    "duration": "10 days"
+                    "duration": "10 days",
                 }
-            ]
+            ],
         }
         patient = {
             "age": 45,
@@ -384,7 +392,7 @@ class PrescriptionGenerator:
             "allergies": ["Penicillin"],
             "current_medications": [],
             "kidney_function": "normal",
-            "liver_function": "normal"
+            "liver_function": "normal",
         }
         issues = [
             {
@@ -392,7 +400,7 @@ class PrescriptionGenerator:
                 "severity": "critical",
                 "drug": "Amoxicillin",
                 "description": "Patient has Penicillin allergy - Amoxicillin is a penicillin derivative",
-                "recommendation": "Switch to non-penicillin antibiotic (e.g., Azithromycin, Ciprofloxacin)"
+                "recommendation": "Switch to non-penicillin antibiotic (e.g., Azithromycin, Ciprofloxacin)",
             }
         ]
         return prescription, patient, issues
@@ -409,7 +417,7 @@ class PrescriptionGenerator:
                     "dosage_mg": 15,
                     "frequency": "once daily",
                     "route": "oral",
-                    "duration": "ongoing"
+                    "duration": "ongoing",
                 },
                 {
                     "drug": "Ibuprofen",
@@ -417,7 +425,7 @@ class PrescriptionGenerator:
                     "dosage_mg": 600,
                     "frequency": "three times daily",
                     "route": "oral",
-                    "duration": "14 days"
+                    "duration": "14 days",
                 },
                 {
                     "drug": "Metformin",
@@ -425,9 +433,9 @@ class PrescriptionGenerator:
                     "dosage_mg": 1000,
                     "frequency": "twice daily",
                     "route": "oral",
-                    "duration": "ongoing"
-                }
-            ]
+                    "duration": "ongoing",
+                },
+            ],
         }
         patient = {
             "age": 72,
@@ -436,7 +444,7 @@ class PrescriptionGenerator:
             "allergies": [],
             "current_medications": ["Warfarin", "Metformin"],
             "kidney_function": "mildly impaired",
-            "liver_function": "normal"
+            "liver_function": "normal",
         }
         issues = [
             {
@@ -444,7 +452,7 @@ class PrescriptionGenerator:
                 "severity": "critical",
                 "drug": "Warfarin",
                 "description": "15mg exceeds maximum daily dose of 10mg - serious bleeding risk",
-                "recommendation": "Reduce to maximum 10mg, typical dose 2-5mg"
+                "recommendation": "Reduce to maximum 10mg, typical dose 2-5mg",
             },
             {
                 "type": "drug_interaction",
@@ -452,15 +460,15 @@ class PrescriptionGenerator:
                 "drug1": "Warfarin",
                 "drug2": "Ibuprofen",
                 "description": "NSAIDs increase bleeding risk with anticoagulants",
-                "recommendation": "Use acetaminophen instead of ibuprofen for pain"
+                "recommendation": "Use acetaminophen instead of ibuprofen for pain",
             },
             {
                 "type": "contraindication",
                 "severity": "warning",
                 "drug": "Metformin",
                 "description": "Patient has impaired kidney function - metformin dose may need adjustment",
-                "recommendation": "Consider dose reduction or monitor kidney function closely"
-            }
+                "recommendation": "Consider dose reduction or monitor kidney function closely",
+            },
         ]
         return prescription, patient, issues
 
