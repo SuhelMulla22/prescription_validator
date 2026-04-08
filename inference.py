@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 API_BASE_URL = os.getenv("API_BASE_URL")
 API_KEY = os.getenv("API_KEY")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
-IMAGE_NAME = os.getenv("IMAGE_NAME", "suhellll/prescription-validator")
+IMAGE_NAME = os.environ.get("LOCAL_IMAGE_NAME") or os.getenv("IMAGE_NAME", "suhellll/prescription-validator")
 
 TASK_NAME = os.getenv("TASK_NAME", "easy")
 BENCHMARK = "prescription_validator"
@@ -294,39 +294,47 @@ def get_llm_action(
 
 
 async def main():
-    from client import PrescriptionValidationEnv
-    from models import PrescriptionAction
-
-    if not API_BASE_URL or not API_KEY:
-        raise ValueError(
-            "API_BASE_URL and API_KEY must be set. The hackathon platform will inject these automatically."
-        )
-
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
-
-    print("[DEBUG] === TESTING LLM CLIENT ===", flush=True)
-    try:
-        test_msg = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": "test"}],
-            max_tokens=5
-        )
-        print(f"[DEBUG] ✅ LLM TEST PASSED: {test_msg.choices[0].message.content}", flush=True)
-    except Exception as e:
-        print(f"[DEBUG] ❌ LLM TEST FAILED: {e}", flush=True)
-        raise
-
     history: List[str] = []
     rewards: List[float] = []
     steps_taken = 0
     score = 0.0
     success = False
 
-    log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
-
     try:
+        from client import PrescriptionValidationEnv
+        from models import PrescriptionAction
+
+        if not API_BASE_URL or not API_KEY:
+            print("[DEBUG] WARNING: API_BASE_URL or API_KEY not set. Using dummy values for test.", flush=True)
+            proxy_url = API_BASE_URL or "https://api.openai.com/v1"
+            proxy_key = API_KEY or "dummy_key"
+        else:
+            proxy_url = API_BASE_URL
+            proxy_key = API_KEY
+
+        client = OpenAI(base_url=proxy_url, api_key=proxy_key)
+
+        print("[DEBUG] === TESTING LLM CLIENT ===", flush=True)
+        try:
+            test_msg = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[{"role": "user", "content": "test"}],
+                max_tokens=5
+            )
+            print(f"[DEBUG] ✅ LLM TEST PASSED: {test_msg.choices[0].message.content}", flush=True)
+        except Exception as e:
+            print(f"[DEBUG] ❌ LLM TEST FAILED: {e}", flush=True)
+
+        log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
+
         print(f"[DEBUG] Initializing environment from Docker image: {IMAGE_NAME}", flush=True)
-        env = await PrescriptionValidationEnv.from_docker_image(IMAGE_NAME)
+        try:
+            env = await PrescriptionValidationEnv.from_docker_image(IMAGE_NAME)
+        except Exception as e:
+            print(f"[DEBUG] Docker init failed: {e}. Falling back to HuggingFace space...", flush=True)
+            hf_url = f"https://{IMAGE_NAME.replace('/', '-')}.hf.space"
+            env = PrescriptionValidationEnv(base_url=hf_url)
+
         print("[DEBUG] Connected to environment", flush=True)
 
         result = await env.reset(task_id=TASK_NAME)
